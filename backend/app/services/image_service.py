@@ -28,3 +28,41 @@ def convert_image(source: Path, destination: Path, output_format: str, width: in
         raise ValueError("The uploaded content is not a readable image") from error
 
     return destination.name, media_type
+
+
+def resize_image(source: Path, destination: Path, width: int, height: int, crop: bool = False) -> tuple[str, str]:
+    with Image.open(source) as image:
+        if crop:
+            source_ratio = image.width / image.height
+            target_ratio = width / height
+            if source_ratio > target_ratio:
+                crop_width = int(image.height * target_ratio)
+                left = (image.width - crop_width) // 2
+                image = image.crop((left, 0, left + crop_width, image.height))
+            else:
+                crop_height = int(image.width / target_ratio)
+                top = (image.height - crop_height) // 2
+                image = image.crop((0, top, image.width, top + crop_height))
+        image = image.resize((width, height), Image.Resampling.LANCZOS)
+        if image.mode in {"RGBA", "LA", "P"}:
+            image = image.convert("RGB")
+        image.save(destination, format="JPEG", quality=90)
+    return destination.name, "image/jpeg"
+
+
+def compress_image(source: Path, destination: Path, target_kb: int, minimum_quality: int = 35) -> tuple[str, str, bool]:
+    with Image.open(source) as image:
+        if image.mode in {"RGBA", "LA", "P"}:
+            image = image.convert("RGB")
+        low, high = minimum_quality, 95
+        best_quality = minimum_quality
+        while low <= high:
+            quality = (low + high) // 2
+            image.save(destination, format="JPEG", quality=quality, optimize=True)
+            if destination.stat().st_size <= target_kb * 1024:
+                best_quality = quality
+                low = quality + 1
+            else:
+                high = quality - 1
+        image.save(destination, format="JPEG", quality=best_quality, optimize=True)
+    return destination.name, "image/jpeg", destination.stat().st_size <= target_kb * 1024
