@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: onefile-api
+    runtime: docker
+    rootDir: backend
+    healthCheckPath: /health
+    envVars:
+      - key: ONEFILE_ALLOWED_ORIGINS
+        sync: false
+      - key: ONEFILE_MAX_FILE_SIZE_BYTES
+        value: "10485760"
+      - key: ONEFILE_MAX_REQUEST_FILES
+        value: "5"

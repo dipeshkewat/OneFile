@@ -2,6 +2,7 @@ from fastapi.testclient import TestClient
 from io import BytesIO
 
 from PIL import Image
+import fitz
 
 from app.main import app
 
@@ -16,14 +17,33 @@ def test_health() -> None:
 
 
 def test_check_file_accepts_png() -> None:
+    source = BytesIO()
+    Image.new("RGB", (2, 2), color="white").save(source, format="PNG")
+
     response = client.post(
         "/api/v1/check/file",
-        files={"file": ("sample.png", b"\x89PNG\r\n\x1a\nvalid", "image/png")},
+        files={"file": ("sample.png", source.getvalue(), "image/png")},
     )
 
     assert response.status_code == 200
     assert response.json()["valid"] is True
     assert response.json()["temporary_files_removed"] is True
+
+
+def test_check_image_reports_dimensions_and_requirement_result() -> None:
+    source = BytesIO()
+    Image.new("RGB", (3, 5), color="white").save(source, format="PNG")
+
+    response = client.post(
+        "/api/v1/check/file",
+        data={"width": "3", "height": "5", "max_size_kb": "100"},
+        files={"file": ("sample.png", source.getvalue(), "image/png")},
+    )
+
+    result = response.json()
+    assert response.status_code == 200
+    assert result["dimensions"] == {"width": 3, "height": 5}
+    assert result["requirements_met"] is True
 
 
 def test_check_file_rejects_mismatched_content() -> None:
@@ -58,3 +78,74 @@ def test_convert_image_returns_resized_png() -> None:
     assert response.headers["content-type"] == "image/png"
     with Image.open(BytesIO(response.content)) as image:
         assert image.size == (2, 2)
+
+
+def test_resize_image_returns_requested_dimensions() -> None:
+    source = BytesIO()
+    Image.new("RGB", (4, 8), color="blue").save(source, format="PNG")
+
+    response = client.post(
+        "/api/v1/images/resize",
+        data={"width": "3", "height": "2", "crop": "true"},
+        files={"file": ("sample.png", source.getvalue(), "image/png")},
+    )
+
+    assert response.status_code == 200
+    with Image.open(BytesIO(response.content)) as image:
+        assert image.size == (3, 2)
+
+
+def test_pdf_rotate_returns_pdf() -> None:
+    source = BytesIO()
+    document = fitz.open()
+    document.new_page(width=200, height=200)
+    document.save(source)
+    document.close()
+
+    response = client.post(
+        "/api/v1/pdfs/rotate",
+        data={"angle": "90"},
+        files={"file": ("sample.pdf", source.getvalue(), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+    result = fitz.open(stream=response.content, filetype="pdf")
+    assert len(result) == 1
+    result.close()
+
+
+def test_pdf_to_images_returns_zip() -> None:
+    source = BytesIO()
+    document = fitz.open()
+    document.new_page(width=200, height=200)
+    document.save(source)
+    document.close()
+
+    response = client.post(
+        "/api/v1/pdfs/to-images",
+        files={"file": ("sample.pdf", source.getvalue(), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/zip"
+
+
+def test_images_to_pdf_returns_pdf() -> None:
+    first = BytesIO()
+    second = BytesIO()
+    Image.new("RGB", (10, 10), color="red").save(first, format="PNG")
+    Image.new("RGB", (10, 10), color="green").save(second, format="PNG")
+
+    response = client.post(
+        "/api/v1/images/to-pdf",
+        files=[
+            ("files", ("first.png", first.getvalue(), "image/png")),
+            ("files", ("second.png", second.getvalue(), "image/png")),
+        ],
+    )
+
+    assert response.status_code == 200
+    document = fitz.open(stream=response.content, filetype="pdf")
+    assert len(document) == 2
+    document.close()

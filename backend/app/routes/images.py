@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 
 from app.services.image_service import compress_image, convert_image, resize_image
 from app.services.pdf_service import images_to_pdf
+from app.config import settings
 from app.utils.temp_files import isolated_temp_directory
 from app.utils.uploads import save_upload
 
@@ -80,6 +81,8 @@ async def compress(background_tasks: BackgroundTasks, file: UploadFile = File(..
 
 @router.post("/to-pdf")
 async def to_pdf(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)) -> FileResponse:
+    if not files or len(files) > settings.max_request_files:
+        raise HTTPException(status_code=422, detail=f"Upload between 1 and {settings.max_request_files} image files")
     context = isolated_temp_directory()
     directory = context.__enter__()
     try:

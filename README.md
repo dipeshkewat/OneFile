@@ -38,3 +38,9 @@ npm run dev
 ```
 
 The Phase 0 shell checks supported image and PDF uploads through `POST /api/v1/check/file`. Processing limits and allowed frontend origins are configured with the variables in `backend/.env.example`.
+
+## MVP operations
+
+The current MVP supports image conversion, image resizing/cropping, target-size image compression, PDF compression, PDF page rotation/deletion/reordering/extraction, PDF-to-images, images-to-PDF, and file requirement checks. DOCX conversion, OCR, accounts, batch ZIP workflows, and persistent storage remain post-MVP items from the implementation plan.
+
+For a shared deployment, deploy `backend/` as the Render service described in `render.yaml`, set `ONEFILE_ALLOWED_ORIGINS` to the deployed Vercel URL, and set `VITE_API_URL` in the frontend environment to the Render API URL before building.
