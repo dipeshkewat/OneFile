@@ -1,5 +1,6 @@
 from fastapi.testclient import TestClient
 from io import BytesIO
+from zipfile import ZipFile
 
 from PIL import Image
 import fitz
@@ -45,6 +46,22 @@ def test_check_image_reports_dimensions_and_requirement_result() -> None:
     assert response.status_code == 200
     assert result["dimensions"] == {"width": 3, "height": 5}
     assert result["requirements_met"] is True
+
+
+def test_check_image_reports_format_and_resolution_requirements() -> None:
+    source = BytesIO()
+    Image.new("RGB", (4, 5), color="white").save(source, format="PNG")
+
+    response = client.post(
+        "/api/v1/check/file",
+        data={"required_format": "png", "resolution": "20"},
+        files={"file": ("sample.png", source.getvalue(), "image/png")},
+    )
+
+    result = response.json()
+    assert response.status_code == 200
+    assert result["requirements_met"] is True
+    assert {check["name"] for check in result["checks"]} == {"format", "resolution"}
 
 
 def test_check_file_rejects_mismatched_content() -> None:
@@ -94,6 +111,43 @@ def test_resize_image_returns_requested_dimensions() -> None:
     assert response.status_code == 200
     with Image.open(BytesIO(response.content)) as image:
         assert image.size == (3, 2)
+
+
+def test_image_auto_fix_returns_requested_jpeg_dimensions() -> None:
+    source = BytesIO()
+    Image.new("RGB", (20, 30), color="blue").save(source, format="PNG")
+
+    response = client.post(
+        "/api/v1/images/auto-fix",
+        data={"output_format": "jpg", "width": "10", "height": "12", "target_kb": "100"},
+        files={"file": ("sample.png", source.getvalue(), "image/png")},
+    )
+
+    assert response.status_code == 200
+    with Image.open(BytesIO(response.content)) as image:
+        assert image.format == "JPEG"
+        assert image.size == (10, 12)
+    assert len(response.content) <= 100 * 1024
+
+
+def test_batch_image_conversion_returns_zip() -> None:
+    first = BytesIO()
+    second = BytesIO()
+    Image.new("RGB", (10, 10), color="red").save(first, format="PNG")
+    Image.new("RGB", (10, 10), color="green").save(second, format="PNG")
+
+    response = client.post(
+        "/api/v1/images/batch",
+        data={"operation": "convert", "output_format": "webp"},
+        files=[
+            ("files", ("first.png", first.getvalue(), "image/png")),
+            ("files", ("second.png", second.getvalue(), "image/png")),
+        ],
+    )
+
+    assert response.status_code == 200
+    with ZipFile(BytesIO(response.content)) as archive:
+        assert sorted(archive.namelist()) == ["first.webp", "second.webp"]
 
 
 def test_pdf_rotate_returns_pdf() -> None:

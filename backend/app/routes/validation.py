@@ -16,8 +16,10 @@ router = APIRouter(tags=["validation"])
 async def check_file(
     file: UploadFile = File(...),
     max_size_kb: int | None = Form(default=None, ge=1),
+    required_format: str | None = Form(default=None),
     width: int | None = Form(default=None, ge=1),
     height: int | None = Form(default=None, ge=1),
+    resolution: int | None = Form(default=None, ge=1),
     page_count: int | None = Form(default=None, ge=1),
 ) -> dict[str, object]:
     filename = Path(file.filename or "upload").name
@@ -44,6 +46,10 @@ async def check_file(
         checks: list[dict[str, object]] = []
         if max_size_kb is not None:
             checks.append({"name": "maximum size", "passed": size <= max_size_kb * 1024, "actual": size, "expected": max_size_kb * 1024})
+        if required_format is not None:
+            normalized_format = required_format.lower().lstrip(".")
+            actual_format = "jpg" if extension == ".jpeg" else extension.lstrip(".")
+            checks.append({"name": "format", "passed": actual_format == normalized_format, "actual": actual_format, "expected": normalized_format})
         if detected[0].startswith("image/"):
             try:
                 with Image.open(stored_path) as image:
@@ -54,6 +60,9 @@ async def check_file(
                 checks.append({"name": "width", "passed": actual_width == width, "actual": actual_width, "expected": width})
             if height is not None:
                 checks.append({"name": "height", "passed": actual_height == height, "actual": actual_height, "expected": height})
+            if resolution is not None:
+                actual_resolution = actual_width * actual_height
+                checks.append({"name": "resolution", "passed": actual_resolution >= resolution, "actual": actual_resolution, "expected": resolution})
             dimensions = {"width": actual_width, "height": actual_height}
             pages = None
         else:

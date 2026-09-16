@@ -1,4 +1,4 @@
-import { ChangeEvent, useState } from "react";
+import { ChangeEvent, DragEvent, useEffect, useState } from "react";
 
 type WorkflowState = "idle" | "selected" | "processing" | "validated" | "error";
 type ToolId = "image-compress" | "image-resize" | "image-convert" | "pdf-compress" | "pdf-organize" | "pdf-convert" | "image-to-pdf" | "document-convert" | "validate";
@@ -70,9 +70,14 @@ export function App() {
   const [pdfConvertMode, setPdfConvertMode] = useState("pdf-to-images");
   const [pages, setPages] = useState("0");
   const [maxSizeKb, setMaxSizeKb] = useState("");
+  const [requiredFormat, setRequiredFormat] = useState("");
   const [requiredWidth, setRequiredWidth] = useState("");
   const [requiredHeight, setRequiredHeight] = useState("");
+  const [requiredResolution, setRequiredResolution] = useState("");
   const [requiredPageCount, setRequiredPageCount] = useState("");
+  const [batchMode, setBatchMode] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const activeTool = tools.flatMap((group) => group.items).find((tool) => tool.id === selectedTool);
 
@@ -82,6 +87,7 @@ export function App() {
     setFile(null);
     setSelectedFiles([]);
     setState("idle");
+    setBatchMode(false);
     if (tool.id === "document-convert") setOutputFormat("pdf");
     if (tool.id === "image-convert") setOutputFormat("png");
     if (tool.id === "image-resize") setResizeMode("crop");
@@ -101,12 +107,44 @@ export function App() {
 
   function selectFile(event: ChangeEvent<HTMLInputElement>) {
     const nextFiles = Array.from(event.target.files ?? []);
+    updateFiles(nextFiles);
+  }
+
+  function updateFiles(nextFiles: File[]) {
     const nextFile = nextFiles[0] ?? null;
     setFile(nextFile);
     setSelectedFiles(nextFiles);
     setState(nextFile ? "selected" : "idle");
-    setMessage(nextFile ? `${nextFile.name} is ready to check.` : "Choose a job above, then add a file to begin.");
+    setMessage(nextFile ? `${nextFiles.length} file${nextFiles.length === 1 ? "" : "s"} ready to process.` : "Choose a job above, then add a file to begin.");
   }
+
+  function handleDrop(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    setIsDragging(false);
+    updateFiles(Array.from(event.dataTransfer.files));
+  }
+
+  function removeFile(index: number) {
+    updateFiles(selectedFiles.filter((_, fileIndex) => fileIndex !== index));
+  }
+
+  function moveFile(index: number, direction: -1 | 1) {
+    const nextFiles = [...selectedFiles];
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= nextFiles.length) return;
+    [nextFiles[index], nextFiles[targetIndex]] = [nextFiles[targetIndex], nextFiles[index]];
+    updateFiles(nextFiles);
+  }
+
+  useEffect(() => {
+    if (!file || !file.type.startsWith("image/")) {
+      setPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(file);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   async function runTool() {
     if (!file) return;
@@ -125,8 +163,10 @@ export function App() {
     try {
       if (activeTool.id === "validate") {
         if (maxSizeKb) body.append("max_size_kb", maxSizeKb);
+        if (requiredFormat) body.append("required_format", requiredFormat);
         if (requiredWidth) body.append("width", requiredWidth);
         if (requiredHeight) body.append("height", requiredHeight);
+        if (requiredResolution) body.append("resolution", requiredResolution);
         if (requiredPageCount) body.append("page_count", requiredPageCount);
         const response = await fetch(`${apiUrl}/api/v1/check/file`, { method: "POST", body });
         const result = await response.json();
@@ -137,7 +177,18 @@ export function App() {
       }
 
       let endpoint = "/api/v1/images/convert";
-      if (activeTool.id === "image-compress") {
+      if (batchMode && ["image-compress", "image-resize", "image-convert"].includes(activeTool.id)) {
+        endpoint = "/api/v1/images/batch";
+        body.delete("file");
+        for (const selectedFile of selectedFiles) body.append("files", selectedFile);
+        body.append("operation", activeTool.id.replace("image-", ""));
+        if (activeTool.id === "image-compress") body.append("target_kb", String(targetKb));
+        if (activeTool.id === "image-resize") {
+          body.append("width", String(width));
+          body.append("height", String(height));
+        }
+        if (activeTool.id === "image-convert") body.append("output_format", outputFormat);
+      } else if (activeTool.id === "image-compress") {
         endpoint = "/api/v1/images/compress";
         body.append("target_kb", String(targetKb));
       } else if (activeTool.id === "image-resize") {
@@ -184,7 +235,7 @@ export function App() {
       const downloadUrl = URL.createObjectURL(await response.blob());
       const download = document.createElement("a");
       download.href = downloadUrl;
-      const extension = activeTool.id === "pdf-convert" ? (pdfConvertMode === "images-to-pdf" ? "pdf" : "zip") : activeTool.id === "image-to-pdf" || activeTool.id.startsWith("pdf") ? "pdf" : outputFormat;
+      const extension = batchMode || activeTool.id === "pdf-convert" && pdfConvertMode === "pdf-to-images" ? "zip" : activeTool.id === "image-to-pdf" || activeTool.id.startsWith("pdf") || activeTool.id === "pdf-convert" ? "pdf" : outputFormat;
       download.download = `onefile-${file.name.split(".")[0]}.${extension}`;
       download.click();
       URL.revokeObjectURL(downloadUrl);
@@ -193,6 +244,36 @@ export function App() {
     } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "The file could not be checked.");
+    }
+  }
+
+  async function runAutoFix() {
+    if (!file || !file.type.startsWith("image/")) return;
+    setState("processing");
+    setMessage("Applying crop, resize, conversion, and compression requirements...");
+    const body = new FormData();
+    body.append("file", file);
+    body.append("output_format", requiredFormat || "jpg");
+    if (requiredWidth) body.append("width", requiredWidth);
+    if (requiredHeight) body.append("height", requiredHeight);
+    if (maxSizeKb) body.append("target_kb", maxSizeKb);
+    try {
+      const response = await fetch(`${apiUrl}/api/v1/images/auto-fix`, { method: "POST", body });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.detail ?? "The requirements could not be satisfied.");
+      }
+      const url = URL.createObjectURL(await response.blob());
+      const download = document.createElement("a");
+      download.href = url;
+      download.download = `onefile-ready.${requiredFormat || "jpg"}`;
+      download.click();
+      URL.revokeObjectURL(url);
+      setState("validated");
+      setMessage("Requirement satisfied. The ready file has been downloaded.");
+    } catch (error) {
+      setState("error");
+      setMessage(error instanceof Error ? error.message : "The requirements could not be satisfied.");
     }
   }
 
@@ -233,7 +314,7 @@ export function App() {
             <span className={`state-pill state-${state}`}>{state}</span>
           </div>
           <div className="upload-section-label">Upload document or image</div>
-          <label className="drop-zone" htmlFor="file-input">
+          <label className={`drop-zone ${isDragging ? "drop-zone-active" : ""}`} htmlFor="file-input" onDragEnter={(event) => { event.preventDefault(); setIsDragging(true); }} onDragOver={(event) => event.preventDefault()} onDragLeave={() => setIsDragging(false)} onDrop={handleDrop}>
             <span className="drop-icon" aria-hidden="true">↑</span>
             <span className="drop-title">Drop a file here or browse</span>
             <span className="drop-detail">{acceptsForTool(activeTool, pdfConvertMode)} · up to 10 MB</span>
@@ -243,9 +324,10 @@ export function App() {
           {activeTool.id === "image-resize" && <div className="config-row"><label>Resize mode<select value={resizeMode} onChange={(event) => setResizeMode(event.target.value)}><option value="crop">Crop to exact size</option><option value="fit">Fit inside dimensions</option></select></label><label>Width<input type="number" min="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Height<input type="number" min="1" value={height} onChange={(event) => setHeight(Number(event.target.value))} /></label></div>}
           {activeTool.id === "document-convert" && <div className="config-row"><label>Output format<select value={outputFormat} onChange={(event) => setOutputFormat(event.target.value)}><option value="pdf">PDF</option><option value="docx">DOCX</option></select></label></div>}
           {activeTool.id === "image-compress" && <div className="config-row"><label>Target size (KB)<input type="number" min="1" max="10240" value={targetKb} onChange={(event) => setTargetKb(Math.max(1, Number(event.target.value) || 1))} /></label></div>}
+          {activeTool.id.startsWith("image-") && activeTool.id !== "image-to-pdf" && <label className="batch-toggle"><input type="checkbox" checked={batchMode} onChange={(event) => setBatchMode(event.target.checked)} /> Process multiple files and download a ZIP</label>}
           {activeTool.id === "pdf-organize" && <div className="config-row"><label>Page operation<select value={pdfOperation} onChange={(event) => setPdfOperation(event.target.value)}><option value="merge">Merge PDFs</option><option value="rotate">Rotate</option><option value="delete">Delete pages</option><option value="reorder">Reorder pages</option><option value="split">Extract pages</option></select></label>{pdfOperation !== "merge" && <label>Pages, zero-based<input value={pages} onChange={(event) => setPages(event.target.value)} /></label>}</div>}
           {activeTool.id === "pdf-convert" && <div className="config-row"><label>Convert from<select value={pdfConvertMode} onChange={(event) => { setPdfConvertMode(event.target.value); setFile(null); setSelectedFiles([]); setState("idle"); }}><option value="pdf-to-images">PDF to images</option><option value="images-to-pdf">Images to PDF</option></select></label></div>}
-          {activeTool.id === "validate" && <div className="config-row"><label>Maximum size (KB)<input type="number" min="1" value={maxSizeKb} onChange={(event) => setMaxSizeKb(event.target.value)} /></label><label>Required width<input type="number" min="1" value={requiredWidth} onChange={(event) => setRequiredWidth(event.target.value)} /></label><label>Required height<input type="number" min="1" value={requiredHeight} onChange={(event) => setRequiredHeight(event.target.value)} /></label><label>Required PDF pages<input type="number" min="1" value={requiredPageCount} onChange={(event) => setRequiredPageCount(event.target.value)} /></label></div>}
+          {activeTool.id === "validate" && <div className="config-row"><label>Required format<select value={requiredFormat} onChange={(event) => setRequiredFormat(event.target.value)}><option value="">Any supported format</option><option value="jpg">JPG</option><option value="png">PNG</option><option value="webp">WebP</option><option value="pdf">PDF</option></select></label><label>Maximum size (KB)<input type="number" min="1" value={maxSizeKb} onChange={(event) => setMaxSizeKb(event.target.value)} /></label><label>Required width<input type="number" min="1" value={requiredWidth} onChange={(event) => setRequiredWidth(event.target.value)} /></label><label>Required height<input type="number" min="1" value={requiredHeight} onChange={(event) => setRequiredHeight(event.target.value)} /></label><label>Minimum resolution<input type="number" min="1" value={requiredResolution} onChange={(event) => setRequiredResolution(event.target.value)} /></label><label>Required PDF pages<input type="number" min="1" value={requiredPageCount} onChange={(event) => setRequiredPageCount(event.target.value)} /></label></div>}
           {!activeTool.available && <div className="planned-note"><span>IN BUILD</span><strong>{activeTool.title} processing is the next backend slice.</strong><p>Your file and requirements will appear here when this operation is connected.</p></div>}
           <div className="workflow-row">
             <div className="file-summary" aria-live="polite">
@@ -255,6 +337,9 @@ export function App() {
             </div>
             <button className="primary-action" type="button" disabled={!file || state === "processing"} onClick={runTool}>{state === "processing" ? "Working..." : activeTool.available ? "Run this job" : "Preview workflow"}<span aria-hidden="true">→</span></button>
           </div>
+          {selectedFiles.length > 0 && <div className="file-list" aria-label="Selected files">{selectedFiles.map((selectedFile, index) => <div className="file-row" key={`${selectedFile.name}-${selectedFile.lastModified}`}><span>{index + 1}. {selectedFile.name}</span><span className="file-row-actions"><button type="button" onClick={() => moveFile(index, -1)} disabled={index === 0} aria-label={`Move ${selectedFile.name} up`}>↑</button><button type="button" onClick={() => moveFile(index, 1)} disabled={index === selectedFiles.length - 1} aria-label={`Move ${selectedFile.name} down`}>↓</button><button type="button" onClick={() => removeFile(index)} aria-label={`Remove ${selectedFile.name}`}>×</button></span></div>)}</div>}
+          {previewUrl && <div className="preview-panel"><span className="summary-label">BEFORE</span><img src={previewUrl} alt="Selected image preview" /></div>}
+          {activeTool.id === "validate" && file?.type.startsWith("image/") && <button className="secondary-action" type="button" disabled={state === "processing"} onClick={runAutoFix}>Auto-fix and validate <span aria-hidden="true">→</span></button>}
           <div className={`message message-${state}`} role="status">{message}</div>
         </section>
       ) : null}
