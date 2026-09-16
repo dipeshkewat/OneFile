@@ -42,7 +42,7 @@ const tools: { label: string; note: string; items: Tool[] }[] = [
   },
 ];
 
-const apiUrl = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const apiUrl = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
 function acceptsForTool(tool: Tool | undefined): string {
   if (!tool) return ".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx";
@@ -59,6 +59,7 @@ export function App() {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [state, setState] = useState<WorkflowState>("idle");
   const [selectedTool, setSelectedTool] = useState<ToolId | null>(null);
+  const [view, setView] = useState<"directory" | "tool">("directory");
   const [message, setMessage] = useState("Choose a job above, then add a file to begin.");
   const [outputFormat, setOutputFormat] = useState("png");
   const [width, setWidth] = useState(1200);
@@ -71,10 +72,20 @@ export function App() {
 
   function chooseTool(tool: Tool) {
     setSelectedTool(tool.id);
+    setView("tool");
     setFile(null);
     setSelectedFiles([]);
     setState("idle");
     setMessage(`Add a file to ${tool.title.toLowerCase()}.`);
+  }
+
+  function goBackToTools() {
+    setView("directory");
+    setSelectedTool(null);
+    setFile(null);
+    setSelectedFiles([]);
+    setState("idle");
+    setMessage("Choose a job above, then add a file to begin.");
   }
 
   function selectFile(event: ChangeEvent<HTMLInputElement>) {
@@ -165,53 +176,58 @@ export function App() {
         <div className="trust-line"><span className="status-dot" /> Temporary processing · no account required</div>
       </section>
 
-      <section className="tool-directory" aria-labelledby="tool-directory-title">
-        <div className="directory-heading"><div><span className="eyebrow">CHOOSE A JOB</span><h2 id="tool-directory-title">What do you need to do?</h2></div><span className="directory-count">{tools.flatMap((group) => group.items).length} tools</span></div>
-        {tools.map((group) => (
-          <div className="tool-group" key={group.label}>
-            <div className="group-heading"><strong>{group.label}</strong><span>{group.note}</span></div>
-            <div className="tool-grid">
-              {group.items.map((tool) => (
-                <button className={`tool-card tool-${tool.accent} ${selectedTool === tool.id ? "tool-active" : ""}`} key={tool.id} type="button" onClick={() => chooseTool(tool)}>
-                  <span className="tool-topline"><span className="tool-mark" aria-hidden="true">{tool.id === "validate" ? "✓" : tool.id.includes("pdf") ? "▤" : "◈"}</span><span className={tool.available ? "tool-status ready" : "tool-status"}>{tool.available ? "Ready" : "Coming next"}</span></span>
-                  <strong>{tool.title}</strong><span className="tool-description">{tool.description}</span><span className="tool-format">{tool.formats}</span><span className="tool-arrow" aria-hidden="true">↗</span>
-                </button>
-              ))}
+      {view === "directory" ? (
+        <section className="tool-directory" aria-labelledby="tool-directory-title">
+          <div className="directory-heading"><div><span className="eyebrow">CHOOSE A JOB</span><h2 id="tool-directory-title">What do you need to do?</h2></div><span className="directory-count">{tools.flatMap((group) => group.items).length} tools</span></div>
+          {tools.map((group) => (
+            <div className="tool-group" key={group.label}>
+              <div className="group-heading"><strong>{group.label}</strong><span>{group.note}</span></div>
+              <div className="tool-grid">
+                {group.items.map((tool) => (
+                  <button className={`tool-card tool-${tool.accent} ${selectedTool === tool.id ? "tool-active" : ""}`} key={tool.id} type="button" onClick={() => chooseTool(tool)}>
+                    <span className="tool-topline"><span className="tool-mark" aria-hidden="true">{tool.id === "validate" ? "✓" : tool.id.includes("pdf") ? "▤" : "◈"}</span><span className={tool.available ? "tool-status ready" : "tool-status"}>{tool.available ? "Ready" : "Coming next"}</span></span>
+                    <strong>{tool.title}</strong><span className="tool-description">{tool.description}</span><span className="tool-format">{tool.formats}</span><span className="tool-arrow" aria-hidden="true">↗</span>
+                  </button>
+                ))}
+              </div>
             </div>
+          ))}
+        </section>
+      ) : activeTool ? (
+        <section className="workspace" aria-label="File preparation workspace">
+          <div className="workspace-header">
+            <div>
+              <button className="back-link" type="button" onClick={goBackToTools}>← Back to tools</button>
+              <span className="eyebrow">{activeTool.title.toUpperCase()}</span>
+              <h2>Configure your file</h2>
+            </div>
+            <span className={`state-pill state-${state}`}>{state}</span>
           </div>
-        ))}
-      </section>
-
-      {activeTool && (
-      <section className="workspace" aria-label="File preparation workspace">
-        <div className="workspace-header">
-          <div><span className="eyebrow">{activeTool.title.toUpperCase()}</span><h2>Configure your file</h2></div>
-          <span className={`state-pill state-${state}`}>{state}</span>
-        </div>
-        <label className="drop-zone" htmlFor="file-input">
-          <span className="drop-icon" aria-hidden="true">↑</span>
-          <span className="drop-title">Drop a file here or browse</span>
-          <span className="drop-detail">{acceptsForTool(activeTool)} · up to 10 MB</span>
-          <input id="file-input" type="file" accept={acceptsForTool(activeTool)} multiple={activeTool.id === "image-to-pdf"} onChange={selectFile} />
-        </label>
-        {(activeTool.id === "image-convert" || activeTool.id === "image-resize") && <div className="config-row"><label>{activeTool.id === "image-convert" ? "Output format" : "Mode"}<select value={activeTool.id === "image-convert" ? outputFormat : "crop"} onChange={(event) => activeTool.id === "image-convert" && setOutputFormat(event.target.value)}>{activeTool.id === "image-convert" ? <><option value="png">PNG</option><option value="jpg">JPG</option><option value="webp">WebP</option></> : <option value="crop">Resize and crop</option>}</select></label><label>Width<input type="number" min="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Height<input type="number" min="1" value={height} onChange={(event) => setHeight(Number(event.target.value))} /></label></div>}
-        {activeTool.id === "image-compress" && <div className="config-row"><label>Maximum size (KB)<input type="number" min="1" value={targetKb} onChange={(event) => setTargetKb(Number(event.target.value))} /></label></div>}
-        {activeTool.id === "pdf-organize" && <div className="config-row"><label>Page operation<select value={pdfOperation} onChange={(event) => setPdfOperation(event.target.value)}><option value="rotate">Rotate</option><option value="delete">Delete pages</option><option value="reorder">Reorder pages</option><option value="split">Extract pages</option></select></label><label>Pages, zero-based<input value={pages} onChange={(event) => setPages(event.target.value)} /></label></div>}
-        {!activeTool.available && <div className="planned-note"><span>IN BUILD</span><strong>{activeTool.title} processing is the next backend slice.</strong><p>Your file and requirements will appear here when this operation is connected.</p></div>}
-        <div className="workflow-row">
-          <div className="file-summary" aria-live="polite">
-            <span className="summary-label">CURRENT FILE</span>
-            <strong>{file ? `${file.name}${selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} more` : ""}` : "No file selected"}</strong>
-            <span>{file ? `${Math.ceil(file.size / 1024)} KB · ${file.type || "unknown type"}` : "Your file stays local until you choose to check it."}</span>
+          <div className="upload-section-label">Upload document or image</div>
+          <label className="drop-zone" htmlFor="file-input">
+            <span className="drop-icon" aria-hidden="true">↑</span>
+            <span className="drop-title">Drop a file here or browse</span>
+            <span className="drop-detail">{acceptsForTool(activeTool)} · up to 10 MB</span>
+            <input id="file-input" type="file" accept={acceptsForTool(activeTool)} multiple={activeTool.id === "image-to-pdf"} onChange={selectFile} />
+          </label>
+          {(activeTool.id === "image-convert" || activeTool.id === "image-resize") && <div className="config-row"><label>{activeTool.id === "image-convert" ? "Output format" : "Mode"}<select value={activeTool.id === "image-convert" ? outputFormat : "crop"} onChange={(event) => activeTool.id === "image-convert" && setOutputFormat(event.target.value)}>{activeTool.id === "image-convert" ? <><option value="png">PNG</option><option value="jpg">JPG</option><option value="webp">WebP</option></> : <option value="crop">Resize and crop</option>}</select></label><label>Width<input type="number" min="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Height<input type="number" min="1" value={height} onChange={(event) => setHeight(Number(event.target.value))} /></label></div>}
+          {activeTool.id === "image-compress" && <div className="config-row"><label>Target size (KB)<input type="number" min="1" max="10240" value={targetKb} onChange={(event) => setTargetKb(Math.max(1, Number(event.target.value) || 1))} /></label></div>}
+          {activeTool.id === "pdf-organize" && <div className="config-row"><label>Page operation<select value={pdfOperation} onChange={(event) => setPdfOperation(event.target.value)}><option value="rotate">Rotate</option><option value="delete">Delete pages</option><option value="reorder">Reorder pages</option><option value="split">Extract pages</option></select></label><label>Pages, zero-based<input value={pages} onChange={(event) => setPages(event.target.value)} /></label></div>}
+          {!activeTool.available && <div className="planned-note"><span>IN BUILD</span><strong>{activeTool.title} processing is the next backend slice.</strong><p>Your file and requirements will appear here when this operation is connected.</p></div>}
+          <div className="workflow-row">
+            <div className="file-summary" aria-live="polite">
+              <span className="summary-label">CURRENT FILE</span>
+              <strong>{file ? `${file.name}${selectedFiles.length > 1 ? ` + ${selectedFiles.length - 1} more` : ""}` : "No file selected"}</strong>
+              <span>{file ? `${Math.ceil(file.size / 1024)} KB · ${file.type || "unknown type"}` : "Your file stays local until you choose to check it."}</span>
+            </div>
+            <button className="primary-action" type="button" disabled={!file || state === "processing"} onClick={runTool}>{state === "processing" ? "Working..." : activeTool.available ? "Run this job" : "Preview workflow"}<span aria-hidden="true">→</span></button>
           </div>
-          <button className="primary-action" type="button" disabled={!file || state === "processing"} onClick={runTool}>{state === "processing" ? "Working..." : activeTool.available ? "Run this job" : "Preview workflow"}<span aria-hidden="true">→</span></button>
-        </div>
-        <div className={`message message-${state}`} role="status">{message}</div>
-      </section>
-      )}
+          <div className={`message message-${state}`} role="status">{message}</div>
+        </section>
+      ) : null}
 
-      {!selectedTool && <div className="empty-hint">Start with the job that matches your portal requirement. You can change tools at any time.</div>}
-      {selectedTool && !activeTool?.available && <div className="empty-hint">{message} Select <strong>Check requirements</strong> to try the working flow today.</div>}
+      {view === "directory" && !selectedTool && <div className="empty-hint">Start with the job that matches your portal requirement. You can change tools at any time.</div>}
+      {view === "tool" && selectedTool && !activeTool?.available && <div className="empty-hint">{message} Select <strong>Check requirements</strong> to try the working flow today.</div>}
 
       <footer><span>OneFile is built around measurable requirements.</span><span>Private by default · no account required</span></footer>
     </main>

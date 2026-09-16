@@ -22,7 +22,8 @@ h1 { max-width: 760px; margin: 0; font-size: clamp(3.3rem, 7vw, 6.5rem); line-he
 h2 { margin: 9px 0 0; font-size: 1.85rem; letter-spacing: -.04em; }
 .state-pill { border: 1px solid #d4cec2; padding: 7px 10px; color: #6d756f; font: 500 11px 'DM Mono', monospace; text-transform: uppercase; }
 .state-validated { color: #397652; border-color: #91b9a0; }.state-error { color: #a44934; border-color: #d7a99b; }
-.drop-zone { min-height: 220px; margin-top: 28px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px dashed #bcb8ad; background: #f8f5ee; cursor: pointer; transition: border-color .2s, background .2s; }
+.upload-section-label { margin-top: 28px; color: #916b52; font: 500 11px 'DM Mono', monospace; letter-spacing: .08em; text-transform: uppercase; }
+.drop-zone { min-height: 220px; margin-top: 12px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px dashed #bcb8ad; background: #f8f5ee; cursor: pointer; transition: border-color .2s, background .2s; }
 .drop-zone:hover, .drop-zone:focus-within { border-color: #b25d36; background: #fffdf8; }
 .drop-zone input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .drop-icon { display: grid; place-items: center; width: 42px; height: 42px; margin-bottom: 15px; border-radius: 50%; background: #e7eee5; color: #397652; font-size: 1.4rem; }
