@@ -13,6 +13,8 @@ OneFile guides a user through preparing a file for submission:
 
 The current MVP supports secure processing for JPG, PNG, WebP, PDF, and DOCX uploads. Processing tools return a downloadable result and remove temporary files after the response is complete.
 
+Phase 1 workflows include image compression with target-size limits, image resize/crop/format conversion, image-to-PDF, PDF compression and page operations, PDF/image conversion, DOCX/PDF conversion, multiple-file ordering and removal, drag-and-drop upload, batch image ZIP output, requirement validation, and image Auto-fix. Auto-fix applies crop, resize, conversion, and JPEG compression when the requested constraints are technically reachable.
+
 ## Privacy and safety
 
 OneFile does not require an account for the current workflow. Uploaded files are handled in an isolated temporary workspace, validated before parsing, and removed after the check completes. Configurable upload and processing limits help prevent oversized or unsupported files from reaching the processing layer.
@@ -41,7 +43,7 @@ The API checks supported uploads through `POST /api/v1/check/file`. Processing l
 
 ## MVP operations
 
-The current MVP supports image conversion, image resizing/cropping, target-size image compression, PDF compression, PDF merge/split/rotation/deletion/reordering, PDF-to-images, images-to-PDF, DOCX-to-PDF, PDF-to-DOCX, and file requirement checks. PDF-to-DOCX preserves extracted text and does not promise exact original layout. OCR, accounts, batch ZIP workflows, and persistent storage remain post-MVP items from the implementation plan.
+The current MVP supports image conversion, image resizing/cropping, target-size image compression, PDF compression, PDF merge/split/rotation/deletion/reordering, PDF-to-images, images-to-PDF, DOCX-to-PDF, PDF-to-DOCX, batch image ZIP workflows, and file requirement checks. PDF-to-DOCX preserves extracted text and does not promise exact original layout. OCR, accounts, persistent storage, and the Phase 2+ document features remain outside this release.
 
 For a shared deployment:
 

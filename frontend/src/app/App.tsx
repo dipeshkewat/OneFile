@@ -58,6 +58,7 @@ export function App() {
   const [file, setFile] = useState<File | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [state, setState] = useState<WorkflowState>("idle");
+  const [progress, setProgress] = useState(0);
   const [selectedTool, setSelectedTool] = useState<ToolId | null>(null);
   const [view, setView] = useState<"directory" | "tool">("directory");
   const [message, setMessage] = useState("Choose a job above, then add a file to begin.");
@@ -87,6 +88,7 @@ export function App() {
     setFile(null);
     setSelectedFiles([]);
     setState("idle");
+    setProgress(0);
     setBatchMode(false);
     if (tool.id === "document-convert") setOutputFormat("pdf");
     if (tool.id === "image-convert") setOutputFormat("png");
@@ -102,6 +104,7 @@ export function App() {
     setFile(null);
     setSelectedFiles([]);
     setState("idle");
+    setProgress(0);
     setMessage("Choose a job above, then add a file to begin.");
   }
 
@@ -115,6 +118,7 @@ export function App() {
     setFile(nextFile);
     setSelectedFiles(nextFiles);
     setState(nextFile ? "selected" : "idle");
+    setProgress(0);
     setMessage(nextFile ? `${nextFiles.length} file${nextFiles.length === 1 ? "" : "s"} ready to process.` : "Choose a job above, then add a file to begin.");
   }
 
@@ -149,6 +153,7 @@ export function App() {
   async function runTool() {
     if (!file) return;
     setState("processing");
+    setProgress(15);
     setMessage(activeTool?.id === "validate" ? "Checking the file before processing..." : `Preparing your file with ${activeTool?.title.toLowerCase()}...`);
 
     if (!activeTool?.available) {
@@ -171,6 +176,7 @@ export function App() {
         const response = await fetch(`${apiUrl}/api/v1/check/file`, { method: "POST", body });
         const result = await response.json();
         if (!response.ok) throw new Error(result.detail ?? "The file could not be checked.");
+        setProgress(100);
         setState("validated");
         setMessage(`${result.filename} is valid as ${result.media_type}. Temporary upload data is removed after the check.`);
         return;
@@ -228,6 +234,7 @@ export function App() {
         body.append("height", String(height));
       }
       const response = await fetch(`${apiUrl}${endpoint}`, { method: "POST", body });
+      setProgress(75);
       if (!response.ok) {
         const result = await response.json();
         throw new Error(result.detail ?? "The image could not be converted.");
@@ -240,6 +247,7 @@ export function App() {
       download.click();
       URL.revokeObjectURL(downloadUrl);
       setState("validated");
+      setProgress(100);
       setMessage("Your converted file is ready and the download has started.");
     } catch (error) {
       setState("error");
@@ -250,6 +258,7 @@ export function App() {
   async function runAutoFix() {
     if (!file || !file.type.startsWith("image/")) return;
     setState("processing");
+    setProgress(15);
     setMessage("Applying crop, resize, conversion, and compression requirements...");
     const body = new FormData();
     body.append("file", file);
@@ -270,6 +279,7 @@ export function App() {
       download.click();
       URL.revokeObjectURL(url);
       setState("validated");
+      setProgress(100);
       setMessage("Requirement satisfied. The ready file has been downloaded.");
     } catch (error) {
       setState("error");
@@ -318,7 +328,7 @@ export function App() {
             <span className="drop-icon" aria-hidden="true">↑</span>
             <span className="drop-title">Drop a file here or browse</span>
             <span className="drop-detail">{acceptsForTool(activeTool, pdfConvertMode)} · up to 10 MB</span>
-            <input id="file-input" type="file" accept={acceptsForTool(activeTool, pdfConvertMode)} multiple={activeTool.id === "image-to-pdf" || (activeTool.id === "pdf-organize" && pdfOperation === "merge") || (activeTool.id === "pdf-convert" && pdfConvertMode === "images-to-pdf")} onChange={selectFile} />
+            <input id="file-input" type="file" accept={acceptsForTool(activeTool, pdfConvertMode)} multiple={batchMode || activeTool.id === "image-to-pdf" || (activeTool.id === "pdf-organize" && pdfOperation === "merge") || (activeTool.id === "pdf-convert" && pdfConvertMode === "images-to-pdf")} onChange={selectFile} />
           </label>
           {activeTool.id === "image-convert" && <div className="config-row"><label>Convert image to<select value={outputFormat} onChange={(event) => setOutputFormat(event.target.value)}><option value="png">PNG</option><option value="jpg">JPG</option><option value="webp">WebP</option></select></label></div>}
           {activeTool.id === "image-resize" && <div className="config-row"><label>Resize mode<select value={resizeMode} onChange={(event) => setResizeMode(event.target.value)}><option value="crop">Crop to exact size</option><option value="fit">Fit inside dimensions</option></select></label><label>Width<input type="number" min="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Height<input type="number" min="1" value={height} onChange={(event) => setHeight(Number(event.target.value))} /></label></div>}
@@ -337,6 +347,7 @@ export function App() {
             </div>
             <button className="primary-action" type="button" disabled={!file || state === "processing"} onClick={runTool}>{state === "processing" ? "Working..." : activeTool.available ? "Run this job" : "Preview workflow"}<span aria-hidden="true">→</span></button>
           </div>
+          {state === "processing" && <div className="progress-track" aria-label={`Processing ${progress}%`}><span style={{ width: `${progress}%` }} /></div>}
           {selectedFiles.length > 0 && <div className="file-list" aria-label="Selected files">{selectedFiles.map((selectedFile, index) => <div className="file-row" key={`${selectedFile.name}-${selectedFile.lastModified}`}><span>{index + 1}. {selectedFile.name}</span><span className="file-row-actions"><button type="button" onClick={() => moveFile(index, -1)} disabled={index === 0} aria-label={`Move ${selectedFile.name} up`}>↑</button><button type="button" onClick={() => moveFile(index, 1)} disabled={index === selectedFiles.length - 1} aria-label={`Move ${selectedFile.name} down`}>↓</button><button type="button" onClick={() => removeFile(index)} aria-label={`Remove ${selectedFile.name}`}>×</button></span></div>)}</div>}
           {previewUrl && <div className="preview-panel"><span className="summary-label">BEFORE</span><img src={previewUrl} alt="Selected image preview" /></div>}
           {activeTool.id === "validate" && file?.type.startsWith("image/") && <button className="secondary-action" type="button" disabled={state === "processing"} onClick={runAutoFix}>Auto-fix and validate <span aria-hidden="true">→</span></button>}
