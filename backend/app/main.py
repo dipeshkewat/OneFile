@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.routes.images import router as image_router
 from app.routes.pdfs import router as pdf_router
+from app.routes.documents import router as document_router
 from app.routes.validation import router as validation_router
 
 app = FastAPI(
@@ -23,6 +24,7 @@ app.add_middleware(
 app.include_router(validation_router, prefix="/api/v1")
 app.include_router(image_router, prefix="/api/v1")
 app.include_router(pdf_router, prefix="/api/v1")
+app.include_router(document_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["system"])

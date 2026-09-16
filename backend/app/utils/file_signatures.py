@@ -1,4 +1,5 @@
 from pathlib import Path
+from zipfile import BadZipFile, ZipFile
 
 SIGNATURES = {
     "jpeg": (b"\xff\xd8\xff", ".jpg"),
@@ -20,4 +21,12 @@ def detect_file_type(path: Path) -> tuple[str, str] | None:
         return "application/pdf", ".pdf"
     if header.startswith(SIGNATURES["webp"][0]) and header[8:12] == b"WEBP":
         return "image/webp", ".webp"
+    if header.startswith(b"PK"):
+        try:
+            with ZipFile(path) as archive:
+                names = set(archive.namelist())
+                if "[Content_Types].xml" in names and "word/document.xml" in names:
+                    return "application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"
+        except BadZipFile:
+            return None
     return None

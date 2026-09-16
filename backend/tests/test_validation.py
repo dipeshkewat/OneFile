@@ -3,6 +3,7 @@ from io import BytesIO
 
 from PIL import Image
 import fitz
+from docx import Document
 
 from app.main import app
 
@@ -115,6 +116,26 @@ def test_pdf_rotate_returns_pdf() -> None:
     result.close()
 
 
+def test_pdf_delete_removes_requested_page() -> None:
+    source = BytesIO()
+    document = fitz.open()
+    document.new_page(width=200, height=200)
+    document.new_page(width=200, height=200)
+    document.save(source)
+    document.close()
+
+    response = client.post(
+        "/api/v1/pdfs/pages/delete",
+        data={"pages": "0"},
+        files={"file": ("sample.pdf", source.getvalue(), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    result = fitz.open(stream=response.content, filetype="pdf")
+    assert len(result) == 1
+    result.close()
+
+
 def test_pdf_to_images_returns_zip() -> None:
     source = BytesIO()
     document = fitz.open()
@@ -149,3 +170,43 @@ def test_images_to_pdf_returns_pdf() -> None:
     document = fitz.open(stream=response.content, filetype="pdf")
     assert len(document) == 2
     document.close()
+
+
+def test_document_conversion_supports_docx_to_pdf() -> None:
+    source = BytesIO()
+    document = Document()
+    document.add_paragraph("OneFile document conversion")
+    document.save(source)
+
+    response = client.post(
+        "/api/v1/documents/convert",
+        data={"output_format": "pdf"},
+        files={
+            "file": (
+                "sample.docx",
+                source.getvalue(),
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            )
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/pdf"
+
+
+def test_document_conversion_supports_pdf_to_docx() -> None:
+    source = BytesIO()
+    document = fitz.open()
+    page = document.new_page(width=200, height=200)
+    page.insert_text((40, 40), "OneFile document conversion")
+    document.save(source)
+    document.close()
+
+    response = client.post(
+        "/api/v1/documents/convert",
+        data={"output_format": "docx"},
+        files={"file": ("sample.pdf", source.getvalue(), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "application/vnd.openxmlformats-officedocument.wordprocessingml.document"

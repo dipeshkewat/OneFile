@@ -89,7 +89,7 @@ async def rotate(background_tasks: BackgroundTasks, file: UploadFile = File(...)
 
 @router.post("/pages/delete")
 async def delete_pages(background_tasks: BackgroundTasks, file: UploadFile = File(...), pages: str = Form(...)) -> FileResponse:
-    return await _single_pdf_response(file, "pages-deleted", background_tasks, _pages(pages))
+    return await _single_pdf_response(file, "delete", background_tasks, _pages(pages))
 
 
 @router.post("/pages/reorder")

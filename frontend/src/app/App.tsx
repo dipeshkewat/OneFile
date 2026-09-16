@@ -35,7 +35,7 @@ const tools: { label: string; note: string; items: Tool[] }[] = [
     label: "Conversions & checks",
     note: "Make the final file ready to submit",
     items: [
-      { id: "document-convert", title: "Convert a document", description: "Prepare common document formats for the destination portal.", formats: "DOCX · PDF", accent: "green", available: false },
+      { id: "document-convert", title: "Convert a document", description: "Prepare common document formats for the destination portal.", formats: "DOCX · PDF", accent: "green", available: true },
       { id: "image-to-pdf", title: "Images to PDF", description: "Combine one or more images into a single upload-ready PDF.", formats: "JPG · PNG · WebP", accent: "yellow", available: true },
       { id: "validate", title: "Check requirements", description: "Confirm format, size, dimensions, and page count before upload.", formats: "All supported files", accent: "orange", available: true },
     ],
@@ -50,7 +50,7 @@ function acceptsForTool(tool: Tool | undefined): string {
   if (tool.id.startsWith("pdf-") && tool.id !== "pdf-convert") return ".pdf";
   if (tool.id === "pdf-convert") return ".pdf";
   if (tool.id === "image-to-pdf") return ".jpg,.jpeg,.png,.webp";
-  if (tool.id === "document-convert") return ".doc,.docx,.pdf";
+  if (tool.id === "document-convert") return ".docx,.pdf";
   return ".jpg,.jpeg,.png,.webp,.pdf";
 }
 
@@ -76,6 +76,8 @@ export function App() {
     setFile(null);
     setSelectedFiles([]);
     setState("idle");
+    if (tool.id === "document-convert") setOutputFormat("pdf");
+    if (tool.id === "image-convert") setOutputFormat("png");
     setMessage(`Add a file to ${tool.title.toLowerCase()}.`);
   }
 
@@ -134,14 +136,22 @@ export function App() {
         endpoint = "/api/v1/pdfs/compress";
       } else if (activeTool.id === "pdf-organize") {
         endpoint = `/api/v1/pdfs/${pdfOperation === "delete" ? "pages/delete" : pdfOperation === "reorder" ? "pages/reorder" : pdfOperation}`;
-        body.append("pages", pages);
-        if (pdfOperation === "rotate") body.append("angle", "90");
+        if (pdfOperation === "merge") {
+          body.delete("file");
+          for (const selectedFile of selectedFiles) body.append("files", selectedFile);
+        } else {
+          body.append("pages", pages);
+          if (pdfOperation === "rotate") body.append("angle", "90");
+        }
       } else if (activeTool.id === "pdf-convert") {
         endpoint = "/api/v1/pdfs/to-images";
       } else if (activeTool.id === "image-to-pdf") {
         endpoint = "/api/v1/images/to-pdf";
         body.delete("file");
         for (const selectedFile of selectedFiles) body.append("files", selectedFile);
+      } else if (activeTool.id === "document-convert") {
+        endpoint = "/api/v1/documents/convert";
+        body.append("output_format", outputFormat);
       } else {
         body.append("output_format", outputFormat);
         body.append("width", String(width));
@@ -208,11 +218,12 @@ export function App() {
             <span className="drop-icon" aria-hidden="true">↑</span>
             <span className="drop-title">Drop a file here or browse</span>
             <span className="drop-detail">{acceptsForTool(activeTool)} · up to 10 MB</span>
-            <input id="file-input" type="file" accept={acceptsForTool(activeTool)} multiple={activeTool.id === "image-to-pdf"} onChange={selectFile} />
+            <input id="file-input" type="file" accept={acceptsForTool(activeTool)} multiple={activeTool.id === "image-to-pdf" || (activeTool.id === "pdf-organize" && pdfOperation === "merge")} onChange={selectFile} />
           </label>
           {(activeTool.id === "image-convert" || activeTool.id === "image-resize") && <div className="config-row"><label>{activeTool.id === "image-convert" ? "Output format" : "Mode"}<select value={activeTool.id === "image-convert" ? outputFormat : "crop"} onChange={(event) => activeTool.id === "image-convert" && setOutputFormat(event.target.value)}>{activeTool.id === "image-convert" ? <><option value="png">PNG</option><option value="jpg">JPG</option><option value="webp">WebP</option></> : <option value="crop">Resize and crop</option>}</select></label><label>Width<input type="number" min="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Height<input type="number" min="1" value={height} onChange={(event) => setHeight(Number(event.target.value))} /></label></div>}
+          {activeTool.id === "document-convert" && <div className="config-row"><label>Output format<select value={outputFormat} onChange={(event) => setOutputFormat(event.target.value)}><option value="pdf">PDF</option><option value="docx">DOCX</option></select></label></div>}
           {activeTool.id === "image-compress" && <div className="config-row"><label>Target size (KB)<input type="number" min="1" max="10240" value={targetKb} onChange={(event) => setTargetKb(Math.max(1, Number(event.target.value) || 1))} /></label></div>}
-          {activeTool.id === "pdf-organize" && <div className="config-row"><label>Page operation<select value={pdfOperation} onChange={(event) => setPdfOperation(event.target.value)}><option value="rotate">Rotate</option><option value="delete">Delete pages</option><option value="reorder">Reorder pages</option><option value="split">Extract pages</option></select></label><label>Pages, zero-based<input value={pages} onChange={(event) => setPages(event.target.value)} /></label></div>}
+          {activeTool.id === "pdf-organize" && <div className="config-row"><label>Page operation<select value={pdfOperation} onChange={(event) => setPdfOperation(event.target.value)}><option value="merge">Merge PDFs</option><option value="rotate">Rotate</option><option value="delete">Delete pages</option><option value="reorder">Reorder pages</option><option value="split">Extract pages</option></select></label>{pdfOperation !== "merge" && <label>Pages, zero-based<input value={pages} onChange={(event) => setPages(event.target.value)} /></label>}</div>}
           {!activeTool.available && <div className="planned-note"><span>IN BUILD</span><strong>{activeTool.title} processing is the next backend slice.</strong><p>Your file and requirements will appear here when this operation is connected.</p></div>}
           <div className="workflow-row">
             <div className="file-summary" aria-live="polite">

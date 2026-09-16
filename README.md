@@ -11,7 +11,7 @@ OneFile guides a user through preparing a file for submission:
 3. Review a clear success or error message before continuing.
 4. Use the planned compression, resizing, conversion, and PDF tools to meet specific requirements.
 
-The current Phase 0 experience focuses on secure file checking for JPG, PNG, WebP, and PDF uploads. The broader product is being built around measurable requirements, so future processing tools will report whether the resulting file actually satisfies the requested format, size, dimensions, or page count.
+The current MVP supports secure processing for JPG, PNG, WebP, PDF, and DOCX uploads. Processing tools return a downloadable result and remove temporary files after the response is complete.
 
 ## Privacy and safety
 
@@ -37,10 +37,18 @@ npm install
 npm run dev
 ```
 
-The Phase 0 shell checks supported image and PDF uploads through `POST /api/v1/check/file`. Processing limits and allowed frontend origins are configured with the variables in `backend/.env.example`.
+The API checks supported uploads through `POST /api/v1/check/file`. Processing limits and allowed frontend origins are configured with the variables in `backend/.env.example`.
 
 ## MVP operations
 
-The current MVP supports image conversion, image resizing/cropping, target-size image compression, PDF compression, PDF page rotation/deletion/reordering/extraction, PDF-to-images, images-to-PDF, and file requirement checks. DOCX conversion, OCR, accounts, batch ZIP workflows, and persistent storage remain post-MVP items from the implementation plan.
+The current MVP supports image conversion, image resizing/cropping, target-size image compression, PDF compression, PDF merge/split/rotation/deletion/reordering, PDF-to-images, images-to-PDF, DOCX-to-PDF, PDF-to-DOCX, and file requirement checks. PDF-to-DOCX preserves extracted text and does not promise exact original layout. OCR, accounts, batch ZIP workflows, and persistent storage remain post-MVP items from the implementation plan.
 
-For a shared deployment, deploy `backend/` as the Render service described in `render.yaml`, set `ONEFILE_ALLOWED_ORIGINS` to the deployed Vercel URL, and set `VITE_API_URL` in the frontend environment to the Render API URL before building.
+For a shared deployment:
+
+1. Deploy `backend/` as the Render service described in `render.yaml`.
+2. Set `ONEFILE_ALLOWED_ORIGINS` on Render to the exact deployed frontend origin, including `https://` and no trailing slash.
+3. Deploy `frontend/` to Vercel or another static host.
+4. Set `VITE_API_URL` on the frontend host to the Render API URL, for example `https://onefile-api.onrender.com`.
+5. Trigger a frontend redeploy after setting `VITE_API_URL`, because Vite injects it at build time.
+
+Before sharing the deployed URL, check the API health endpoint at `<API_URL>/health` and run one image and one PDF operation from the deployed frontend. The service is intentionally stateless; files are temporary and are not retained between requests.
