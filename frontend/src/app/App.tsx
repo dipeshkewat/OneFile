@@ -44,11 +44,11 @@ const tools: { label: string; note: string; items: Tool[] }[] = [
 
 const apiUrl = import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000";
 
-function acceptsForTool(tool: Tool | undefined): string {
+function acceptsForTool(tool: Tool | undefined, pdfConvertMode: string): string {
   if (!tool) return ".jpg,.jpeg,.png,.webp,.pdf,.doc,.docx";
   if (tool.id.startsWith("image-")) return ".jpg,.jpeg,.png,.webp";
   if (tool.id.startsWith("pdf-") && tool.id !== "pdf-convert") return ".pdf";
-  if (tool.id === "pdf-convert") return ".pdf";
+  if (tool.id === "pdf-convert") return pdfConvertMode === "images-to-pdf" ? ".jpg,.jpeg,.png,.webp" : ".pdf";
   if (tool.id === "image-to-pdf") return ".jpg,.jpeg,.png,.webp";
   if (tool.id === "document-convert") return ".docx,.pdf";
   return ".jpg,.jpeg,.png,.webp,.pdf";
@@ -65,8 +65,14 @@ export function App() {
   const [width, setWidth] = useState(1200);
   const [height, setHeight] = useState(1200);
   const [targetKb, setTargetKb] = useState(100);
+  const [resizeMode, setResizeMode] = useState("crop");
   const [pdfOperation, setPdfOperation] = useState("rotate");
+  const [pdfConvertMode, setPdfConvertMode] = useState("pdf-to-images");
   const [pages, setPages] = useState("0");
+  const [maxSizeKb, setMaxSizeKb] = useState("");
+  const [requiredWidth, setRequiredWidth] = useState("");
+  const [requiredHeight, setRequiredHeight] = useState("");
+  const [requiredPageCount, setRequiredPageCount] = useState("");
 
   const activeTool = tools.flatMap((group) => group.items).find((tool) => tool.id === selectedTool);
 
@@ -78,6 +84,9 @@ export function App() {
     setState("idle");
     if (tool.id === "document-convert") setOutputFormat("pdf");
     if (tool.id === "image-convert") setOutputFormat("png");
+    if (tool.id === "image-resize") setResizeMode("crop");
+    if (tool.id === "pdf-organize") setPdfOperation("merge");
+    if (tool.id === "pdf-convert") setPdfConvertMode("pdf-to-images");
     setMessage(`Add a file to ${tool.title.toLowerCase()}.`);
   }
 
@@ -115,6 +124,10 @@ export function App() {
 
     try {
       if (activeTool.id === "validate") {
+        if (maxSizeKb) body.append("max_size_kb", maxSizeKb);
+        if (requiredWidth) body.append("width", requiredWidth);
+        if (requiredHeight) body.append("height", requiredHeight);
+        if (requiredPageCount) body.append("page_count", requiredPageCount);
         const response = await fetch(`${apiUrl}/api/v1/check/file`, { method: "POST", body });
         const result = await response.json();
         if (!response.ok) throw new Error(result.detail ?? "The file could not be checked.");
@@ -131,7 +144,7 @@ export function App() {
         endpoint = "/api/v1/images/resize";
         body.append("width", String(width));
         body.append("height", String(height));
-        body.append("crop", "true");
+        body.append("crop", String(resizeMode === "crop"));
       } else if (activeTool.id === "pdf-compress") {
         endpoint = "/api/v1/pdfs/compress";
       } else if (activeTool.id === "pdf-organize") {
@@ -144,7 +157,13 @@ export function App() {
           if (pdfOperation === "rotate") body.append("angle", "90");
         }
       } else if (activeTool.id === "pdf-convert") {
-        endpoint = "/api/v1/pdfs/to-images";
+        if (pdfConvertMode === "images-to-pdf") {
+          endpoint = "/api/v1/images/to-pdf";
+          body.delete("file");
+          for (const selectedFile of selectedFiles) body.append("files", selectedFile);
+        } else {
+          endpoint = "/api/v1/pdfs/to-images";
+        }
       } else if (activeTool.id === "image-to-pdf") {
         endpoint = "/api/v1/images/to-pdf";
         body.delete("file");
@@ -165,7 +184,7 @@ export function App() {
       const downloadUrl = URL.createObjectURL(await response.blob());
       const download = document.createElement("a");
       download.href = downloadUrl;
-      const extension = activeTool.id === "pdf-convert" ? "zip" : activeTool.id === "image-to-pdf" || activeTool.id.startsWith("pdf") ? "pdf" : outputFormat;
+      const extension = activeTool.id === "pdf-convert" ? (pdfConvertMode === "images-to-pdf" ? "pdf" : "zip") : activeTool.id === "image-to-pdf" || activeTool.id.startsWith("pdf") ? "pdf" : outputFormat;
       download.download = `onefile-${file.name.split(".")[0]}.${extension}`;
       download.click();
       URL.revokeObjectURL(downloadUrl);
@@ -217,13 +236,16 @@ export function App() {
           <label className="drop-zone" htmlFor="file-input">
             <span className="drop-icon" aria-hidden="true">↑</span>
             <span className="drop-title">Drop a file here or browse</span>
-            <span className="drop-detail">{acceptsForTool(activeTool)} · up to 10 MB</span>
-            <input id="file-input" type="file" accept={acceptsForTool(activeTool)} multiple={activeTool.id === "image-to-pdf" || (activeTool.id === "pdf-organize" && pdfOperation === "merge")} onChange={selectFile} />
+            <span className="drop-detail">{acceptsForTool(activeTool, pdfConvertMode)} · up to 10 MB</span>
+            <input id="file-input" type="file" accept={acceptsForTool(activeTool, pdfConvertMode)} multiple={activeTool.id === "image-to-pdf" || (activeTool.id === "pdf-organize" && pdfOperation === "merge") || (activeTool.id === "pdf-convert" && pdfConvertMode === "images-to-pdf")} onChange={selectFile} />
           </label>
-          {(activeTool.id === "image-convert" || activeTool.id === "image-resize") && <div className="config-row"><label>{activeTool.id === "image-convert" ? "Output format" : "Mode"}<select value={activeTool.id === "image-convert" ? outputFormat : "crop"} onChange={(event) => activeTool.id === "image-convert" && setOutputFormat(event.target.value)}>{activeTool.id === "image-convert" ? <><option value="png">PNG</option><option value="jpg">JPG</option><option value="webp">WebP</option></> : <option value="crop">Resize and crop</option>}</select></label><label>Width<input type="number" min="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Height<input type="number" min="1" value={height} onChange={(event) => setHeight(Number(event.target.value))} /></label></div>}
+          {activeTool.id === "image-convert" && <div className="config-row"><label>Convert image to<select value={outputFormat} onChange={(event) => setOutputFormat(event.target.value)}><option value="png">PNG</option><option value="jpg">JPG</option><option value="webp">WebP</option></select></label></div>}
+          {activeTool.id === "image-resize" && <div className="config-row"><label>Resize mode<select value={resizeMode} onChange={(event) => setResizeMode(event.target.value)}><option value="crop">Crop to exact size</option><option value="fit">Fit inside dimensions</option></select></label><label>Width<input type="number" min="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Height<input type="number" min="1" value={height} onChange={(event) => setHeight(Number(event.target.value))} /></label></div>}
           {activeTool.id === "document-convert" && <div className="config-row"><label>Output format<select value={outputFormat} onChange={(event) => setOutputFormat(event.target.value)}><option value="pdf">PDF</option><option value="docx">DOCX</option></select></label></div>}
           {activeTool.id === "image-compress" && <div className="config-row"><label>Target size (KB)<input type="number" min="1" max="10240" value={targetKb} onChange={(event) => setTargetKb(Math.max(1, Number(event.target.value) || 1))} /></label></div>}
           {activeTool.id === "pdf-organize" && <div className="config-row"><label>Page operation<select value={pdfOperation} onChange={(event) => setPdfOperation(event.target.value)}><option value="merge">Merge PDFs</option><option value="rotate">Rotate</option><option value="delete">Delete pages</option><option value="reorder">Reorder pages</option><option value="split">Extract pages</option></select></label>{pdfOperation !== "merge" && <label>Pages, zero-based<input value={pages} onChange={(event) => setPages(event.target.value)} /></label>}</div>}
+          {activeTool.id === "pdf-convert" && <div className="config-row"><label>Convert from<select value={pdfConvertMode} onChange={(event) => { setPdfConvertMode(event.target.value); setFile(null); setSelectedFiles([]); setState("idle"); }}><option value="pdf-to-images">PDF to images</option><option value="images-to-pdf">Images to PDF</option></select></label></div>}
+          {activeTool.id === "validate" && <div className="config-row"><label>Maximum size (KB)<input type="number" min="1" value={maxSizeKb} onChange={(event) => setMaxSizeKb(event.target.value)} /></label><label>Required width<input type="number" min="1" value={requiredWidth} onChange={(event) => setRequiredWidth(event.target.value)} /></label><label>Required height<input type="number" min="1" value={requiredHeight} onChange={(event) => setRequiredHeight(event.target.value)} /></label><label>Required PDF pages<input type="number" min="1" value={requiredPageCount} onChange={(event) => setRequiredPageCount(event.target.value)} /></label></div>}
           {!activeTool.available && <div className="planned-note"><span>IN BUILD</span><strong>{activeTool.title} processing is the next backend slice.</strong><p>Your file and requirements will appear here when this operation is connected.</p></div>}
           <div className="workflow-row">
             <div className="file-summary" aria-live="polite">
