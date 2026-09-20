@@ -1077,9 +1077,11 @@ export function App() {
         <section className="workspace" aria-label="File preparation workspace">
           <div className="workspace-header">
             <div>
-              <button className="back-link" type="button" onClick={goBackToTools}>
-                ← Back to tools
-              </button>
+              <div className="back-link-wrapper">
+                <button className="back-link" type="button" onClick={goBackToTools}>
+                  ← Back to tools
+                </button>
+              </div>
               <span className="eyebrow">{activeItem?.categoryLabel.toUpperCase() ?? "TOOL"}</span>
               <h2>{activeItem?.title ?? "Configure your file"}</h2>
             </div>

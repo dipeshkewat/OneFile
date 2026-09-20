@@ -288,13 +288,17 @@ h1 {
   gap: 20px;
 }
 
+.back-link-wrapper {
+  margin-bottom: 8px;
+}
+
 .back-link {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   background: transparent;
   border: 0;
-  padding: 0 0 10px 0;
+  padding: 0;
   color: #b25d36;
   cursor: pointer;
   font: 600 13px 'Manrope', sans-serif;
