@@ -1,7 +1,7 @@
 import { ChangeEvent, DragEvent, useEffect, useState } from "react";
 
 type WorkflowState = "idle" | "selected" | "processing" | "validated" | "error";
-type ToolId = "image-compress" | "image-resize" | "image-convert" | "pdf-compress" | "pdf-organize" | "pdf-convert" | "image-to-pdf" | "document-convert" | "validate";
+type ToolId = "image-compress" | "image-resize" | "image-convert" | "pdf-compress" | "pdf-organize" | "pdf-convert" | "pdf-enhance" | "pdf-review" | "pdf-intelligence" | "image-to-pdf" | "document-convert" | "validate";
 
 type Tool = {
   id: ToolId;
@@ -11,6 +11,8 @@ type Tool = {
   accent: string;
   available: boolean;
 };
+type Preset = { id: string; name: string; tool: string; configuration: Record<string, unknown> };
+type HistoryEntry = { id: string; tool: string; input_name: string; output_name: string; status: string; created_at: string };
 
 const tools: { label: string; note: string; items: Tool[] }[] = [
   {
@@ -29,6 +31,9 @@ const tools: { label: string; note: string; items: Tool[] }[] = [
       { id: "pdf-compress", title: "Compress PDF", description: "Reduce a PDF for upload while keeping its pages readable.", formats: "PDF · Target MB", accent: "orange", available: true },
       { id: "pdf-organize", title: "Organize pages", description: "Merge, split, rotate, delete, or reorder PDF pages.", formats: "Merge · Split · Rotate", accent: "green", available: true },
       { id: "pdf-convert", title: "PDF conversion", description: "Turn images into a PDF or render PDF pages as images.", formats: "Image ↔ PDF", accent: "yellow", available: true },
+      { id: "pdf-enhance", title: "PDF enhancements", description: "Add finishing touches or secure an existing PDF.", formats: "Watermark · Protect · Repair", accent: "green", available: true },
+      { id: "pdf-review", title: "Review PDF", description: "Compare versions or permanently remove sensitive terms.", formats: "Compare · Redact", accent: "orange", available: true },
+      { id: "pdf-intelligence", title: "PDF intelligence", description: "Turn PDF content into Markdown or split it into sections.", formats: "Markdown · Smart Split", accent: "yellow", available: true },
     ],
   },
   {
@@ -69,6 +74,14 @@ export function App() {
   const [resizeMode, setResizeMode] = useState("crop");
   const [pdfOperation, setPdfOperation] = useState("rotate");
   const [pdfConvertMode, setPdfConvertMode] = useState("pdf-to-images");
+  const [pdfEnhanceOperation, setPdfEnhanceOperation] = useState("watermark");
+  const [watermarkText, setWatermarkText] = useState("OneFile");
+  const [pageStart, setPageStart] = useState(1);
+  const [pdfPassword, setPdfPassword] = useState("");
+  const [cropMargins, setCropMargins] = useState({ left: 0, top: 0, right: 0, bottom: 0 });
+  const [pdfReviewOperation, setPdfReviewOperation] = useState("compare");
+  const [redactionTerms, setRedactionTerms] = useState("");
+  const [intelligenceOperation, setIntelligenceOperation] = useState("pdf-to-markdown");
   const [pages, setPages] = useState("0");
   const [maxSizeKb, setMaxSizeKb] = useState("");
   const [requiredFormat, setRequiredFormat] = useState("");
@@ -79,6 +92,10 @@ export function App() {
   const [batchMode, setBatchMode] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [presetName, setPresetName] = useState("");
+  const [presetTool, setPresetTool] = useState<ToolId>("image-compress");
 
   const activeTool = tools.flatMap((group) => group.items).find((tool) => tool.id === selectedTool);
 
@@ -95,6 +112,9 @@ export function App() {
     if (tool.id === "image-resize") setResizeMode("crop");
     if (tool.id === "pdf-organize") setPdfOperation("merge");
     if (tool.id === "pdf-convert") setPdfConvertMode("pdf-to-images");
+    if (tool.id === "pdf-enhance") setPdfEnhanceOperation("watermark");
+    if (tool.id === "pdf-review") setPdfReviewOperation("compare");
+    if (tool.id === "pdf-intelligence") setIntelligenceOperation("pdf-to-markdown");
     setMessage(`Add a file to ${tool.title.toLowerCase()}.`);
   }
 
@@ -150,8 +170,45 @@ export function App() {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
+  useEffect(() => {
+    if (view !== "directory") return;
+    Promise.all([
+      fetch(`${apiUrl}/api/v1/platform/presets`).then((response) => response.json()),
+      fetch(`${apiUrl}/api/v1/platform/history`).then((response) => response.json()),
+    ]).then(([nextPresets, nextHistory]) => {
+      setPresets(nextPresets);
+      setHistory(nextHistory);
+    }).catch(() => undefined);
+  }, [view]);
+
+  async function savePreset() {
+    if (!presetName.trim()) return;
+    const response = await fetch(`${apiUrl}/api/v1/platform/presets`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: presetName.trim(), tool: presetTool, configuration: {} }),
+    });
+    if (response.ok) {
+      setPresets([await response.json(), ...presets]);
+      setPresetName("");
+    }
+  }
+
+  function recordHistory(inputName: string, outputName: string, tool: string) {
+    void fetch(`${apiUrl}/api/v1/platform/history`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tool, input_name: inputName, output_name: outputName, status: "completed" }),
+    });
+  }
+
   async function runTool() {
     if (!file) return;
+    if (activeTool?.id === "pdf-review" && pdfReviewOperation === "compare" && selectedFiles.length < 2) {
+      setState("error");
+      setMessage("Select two PDF files to compare.");
+      return;
+    }
     setState("processing");
     setProgress(15);
     setMessage(activeTool?.id === "validate" ? "Checking the file before processing..." : `Preparing your file with ${activeTool?.title.toLowerCase()}...`);
@@ -179,6 +236,7 @@ export function App() {
         setProgress(100);
         setState("validated");
         setMessage(`${result.filename} is valid as ${result.media_type}. Temporary upload data is removed after the check.`);
+        recordHistory(file.name, file.name, activeTool.id);
         return;
       }
 
@@ -221,6 +279,30 @@ export function App() {
         } else {
           endpoint = "/api/v1/pdfs/to-images";
         }
+      } else if (activeTool.id === "pdf-enhance") {
+        endpoint = "/api/v1/pdfs/enhance";
+        body.append("operation", pdfEnhanceOperation);
+        if (pdfEnhanceOperation === "watermark") body.append("text", watermarkText);
+        if (pdfEnhanceOperation === "page-numbers") body.append("start", String(pageStart));
+        if (pdfEnhanceOperation === "crop") {
+          body.append("left", String(cropMargins.left));
+          body.append("top", String(cropMargins.top));
+          body.append("right", String(cropMargins.right));
+          body.append("bottom", String(cropMargins.bottom));
+        }
+        if (["protect", "unlock"].includes(pdfEnhanceOperation)) body.append("password", pdfPassword);
+      } else if (activeTool.id === "pdf-review") {
+        if (pdfReviewOperation === "compare") {
+          endpoint = "/api/v1/pdfs/compare";
+          body.delete("file");
+          body.append("first", selectedFiles[0]);
+          body.append("second", selectedFiles[1]);
+        } else {
+          endpoint = "/api/v1/pdfs/redact";
+          body.append("terms", redactionTerms);
+        }
+      } else if (activeTool.id === "pdf-intelligence") {
+        endpoint = `/api/v1/ai/${intelligenceOperation}`;
       } else if (activeTool.id === "image-to-pdf") {
         endpoint = "/api/v1/images/to-pdf";
         body.delete("file");
@@ -239,16 +321,25 @@ export function App() {
         const result = await response.json();
         throw new Error(result.detail ?? "The image could not be converted.");
       }
+      if (activeTool.id === "pdf-review" && pdfReviewOperation === "compare") {
+        const result = await response.json();
+        setProgress(100);
+        setState("validated");
+        setMessage(result.identical ? "The PDF versions are identical." : `${result.changed_pages.length} page(s) differ between the PDF versions.`);
+        return;
+      }
       const downloadUrl = URL.createObjectURL(await response.blob());
       const download = document.createElement("a");
       download.href = downloadUrl;
-      const extension = batchMode || activeTool.id === "pdf-convert" && pdfConvertMode === "pdf-to-images" ? "zip" : activeTool.id === "image-to-pdf" || activeTool.id.startsWith("pdf") || activeTool.id === "pdf-convert" ? "pdf" : outputFormat;
-      download.download = `onefile-${file.name.split(".")[0]}.${extension}`;
+      const extension = batchMode || activeTool.id === "pdf-convert" && pdfConvertMode === "pdf-to-images" || activeTool.id === "pdf-intelligence" && intelligenceOperation === "smart-split" ? "zip" : activeTool.id === "pdf-intelligence" && intelligenceOperation === "pdf-to-markdown" ? "md" : activeTool.id === "image-to-pdf" || activeTool.id.startsWith("pdf") || activeTool.id === "pdf-convert" ? "pdf" : outputFormat;
+      const outputName = `onefile-${file.name.split(".")[0]}.${extension}`;
+      download.download = outputName;
       download.click();
       URL.revokeObjectURL(downloadUrl);
       setState("validated");
       setProgress(100);
       setMessage("Your converted file is ready and the download has started.");
+      recordHistory(file.name, outputName, activeTool.id);
     } catch (error) {
       setState("error");
       setMessage(error instanceof Error ? error.message : "The file could not be checked.");
@@ -328,7 +419,7 @@ export function App() {
             <span className="drop-icon" aria-hidden="true">↑</span>
             <span className="drop-title">Drop a file here or browse</span>
             <span className="drop-detail">{acceptsForTool(activeTool, pdfConvertMode)} · up to 10 MB</span>
-            <input id="file-input" type="file" accept={acceptsForTool(activeTool, pdfConvertMode)} multiple={batchMode || activeTool.id === "image-to-pdf" || (activeTool.id === "pdf-organize" && pdfOperation === "merge") || (activeTool.id === "pdf-convert" && pdfConvertMode === "images-to-pdf")} onChange={selectFile} />
+            <input id="file-input" type="file" accept={acceptsForTool(activeTool, pdfConvertMode)} multiple={batchMode || activeTool.id === "image-to-pdf" || (activeTool.id === "pdf-organize" && pdfOperation === "merge") || (activeTool.id === "pdf-convert" && pdfConvertMode === "images-to-pdf") || (activeTool.id === "pdf-review" && pdfReviewOperation === "compare")} onChange={selectFile} />
           </label>
           {activeTool.id === "image-convert" && <div className="config-row"><label>Convert image to<select value={outputFormat} onChange={(event) => setOutputFormat(event.target.value)}><option value="png">PNG</option><option value="jpg">JPG</option><option value="webp">WebP</option></select></label></div>}
           {activeTool.id === "image-resize" && <div className="config-row"><label>Resize mode<select value={resizeMode} onChange={(event) => setResizeMode(event.target.value)}><option value="crop">Crop to exact size</option><option value="fit">Fit inside dimensions</option></select></label><label>Width<input type="number" min="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Height<input type="number" min="1" value={height} onChange={(event) => setHeight(Number(event.target.value))} /></label></div>}
@@ -337,6 +428,9 @@ export function App() {
           {activeTool.id.startsWith("image-") && activeTool.id !== "image-to-pdf" && <label className="batch-toggle"><input type="checkbox" checked={batchMode} onChange={(event) => setBatchMode(event.target.checked)} /> Process multiple files and download a ZIP</label>}
           {activeTool.id === "pdf-organize" && <div className="config-row"><label>Page operation<select value={pdfOperation} onChange={(event) => setPdfOperation(event.target.value)}><option value="merge">Merge PDFs</option><option value="rotate">Rotate</option><option value="delete">Delete pages</option><option value="reorder">Reorder pages</option><option value="split">Extract pages</option></select></label>{pdfOperation !== "merge" && <label>Pages, zero-based<input value={pages} onChange={(event) => setPages(event.target.value)} /></label>}</div>}
           {activeTool.id === "pdf-convert" && <div className="config-row"><label>Convert from<select value={pdfConvertMode} onChange={(event) => { setPdfConvertMode(event.target.value); setFile(null); setSelectedFiles([]); setState("idle"); }}><option value="pdf-to-images">PDF to images</option><option value="images-to-pdf">Images to PDF</option></select></label></div>}
+          {activeTool.id === "pdf-enhance" && <div className="config-row"><label>PDF enhancement<select value={pdfEnhanceOperation} onChange={(event) => setPdfEnhanceOperation(event.target.value)}><option value="watermark">Watermark</option><option value="page-numbers">Add page numbers</option><option value="crop">Crop PDF</option><option value="protect">Protect PDF</option><option value="unlock">Unlock PDF</option><option value="repair">Repair PDF</option></select></label>{pdfEnhanceOperation === "watermark" && <label>Watermark text<input value={watermarkText} onChange={(event) => setWatermarkText(event.target.value)} /></label>}{pdfEnhanceOperation === "page-numbers" && <label>Starting number<input type="number" min="1" value={pageStart} onChange={(event) => setPageStart(Number(event.target.value))} /></label>}{["protect", "unlock"].includes(pdfEnhanceOperation) && <label>Password<input type="password" value={pdfPassword} onChange={(event) => setPdfPassword(event.target.value)} /></label>}{pdfEnhanceOperation === "crop" && <><label>Left<input type="number" min="0" value={cropMargins.left} onChange={(event) => setCropMargins({ ...cropMargins, left: Number(event.target.value) })} /></label><label>Top<input type="number" min="0" value={cropMargins.top} onChange={(event) => setCropMargins({ ...cropMargins, top: Number(event.target.value) })} /></label><label>Right<input type="number" min="0" value={cropMargins.right} onChange={(event) => setCropMargins({ ...cropMargins, right: Number(event.target.value) })} /></label><label>Bottom<input type="number" min="0" value={cropMargins.bottom} onChange={(event) => setCropMargins({ ...cropMargins, bottom: Number(event.target.value) })} /></label></>}</div>}
+          {activeTool.id === "pdf-review" && <div className="config-row"><label>Review action<select value={pdfReviewOperation} onChange={(event) => { setPdfReviewOperation(event.target.value); setFile(null); setSelectedFiles([]); setState("idle"); }}><option value="compare">Compare two PDFs</option><option value="redact">Redact terms</option></select></label>{pdfReviewOperation === "redact" && <label>Terms to redact<input placeholder="name, address, account" value={redactionTerms} onChange={(event) => setRedactionTerms(event.target.value)} /></label>}</div>}
+          {activeTool.id === "pdf-intelligence" && <div className="config-row"><label>Document intelligence<select value={intelligenceOperation} onChange={(event) => setIntelligenceOperation(event.target.value)}><option value="pdf-to-markdown">PDF to Markdown</option><option value="smart-split">Smart Split</option></select></label></div>}
           {activeTool.id === "validate" && <div className="config-row"><label>Required format<select value={requiredFormat} onChange={(event) => setRequiredFormat(event.target.value)}><option value="">Any supported format</option><option value="jpg">JPG</option><option value="png">PNG</option><option value="webp">WebP</option><option value="pdf">PDF</option></select></label><label>Maximum size (KB)<input type="number" min="1" value={maxSizeKb} onChange={(event) => setMaxSizeKb(event.target.value)} /></label><label>Required width<input type="number" min="1" value={requiredWidth} onChange={(event) => setRequiredWidth(event.target.value)} /></label><label>Required height<input type="number" min="1" value={requiredHeight} onChange={(event) => setRequiredHeight(event.target.value)} /></label><label>Minimum resolution<input type="number" min="1" value={requiredResolution} onChange={(event) => setRequiredResolution(event.target.value)} /></label><label>Required PDF pages<input type="number" min="1" value={requiredPageCount} onChange={(event) => setRequiredPageCount(event.target.value)} /></label></div>}
           {!activeTool.available && <div className="planned-note"><span>IN BUILD</span><strong>{activeTool.title} processing is the next backend slice.</strong><p>Your file and requirements will appear here when this operation is connected.</p></div>}
           <div className="workflow-row">
@@ -357,6 +451,8 @@ export function App() {
 
       {view === "directory" && !selectedTool && <div className="empty-hint">Start with the job that matches your portal requirement. You can change tools at any time.</div>}
       {view === "tool" && selectedTool && !activeTool?.available && <div className="empty-hint">{message} Select <strong>Check requirements</strong> to try the working flow today.</div>}
+
+      {view === "directory" && <section className="platform-panel" aria-label="OneFile workspace"><div><span className="eyebrow">WORKSPACE</span><h2>Saved workflows</h2><p className="platform-note">Presets and history store metadata only. Uploaded files are never saved here.</p></div><div className="preset-form"><input aria-label="Preset name" placeholder="Preset name" value={presetName} onChange={(event) => setPresetName(event.target.value)} /><select aria-label="Preset tool" value={presetTool} onChange={(event) => setPresetTool(event.target.value as ToolId)}><option value="image-compress">Compress image</option><option value="image-resize">Resize image</option><option value="validate">Check requirements</option></select><button type="button" className="secondary-action" onClick={savePreset}>Save preset</button></div><div className="platform-columns"><div><strong>Saved presets</strong>{presets.length ? presets.map((preset) => <div className="platform-row" key={preset.id}><span>{preset.name}</span><small>{preset.tool}</small></div>) : <p className="platform-empty">No saved presets yet.</p>}</div><div><strong>Recent processing</strong>{history.length ? history.slice(0, 5).map((entry) => <div className="platform-row" key={entry.id}><span>{entry.input_name}</span><small>{entry.tool}</small></div>) : <p className="platform-empty">No processing history yet.</p>}</div></div></section>}
 
       <footer><span>OneFile is built around measurable requirements.</span><span>Private by default · no account required</span></footer>
     </main>

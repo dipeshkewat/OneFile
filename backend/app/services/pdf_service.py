@@ -62,3 +62,82 @@ def pdf_to_images(source: Path, destination: Path) -> None:
                 archive.writestr(image_name, pixmap.tobytes("png"))
     finally:
         document.close()
+
+
+def watermark_pdf(source: Path, destination: Path, text: str) -> None:
+    document = fitz.open(source)
+    try:
+        for page in document:
+            page.insert_text(
+                (page.rect.width / 2 - min(page.rect.width / 3, len(text) * 4), page.rect.height / 2),
+                text,
+                fontsize=24,
+                color=(0.55, 0.55, 0.55),
+                overlay=True,
+            )
+        document.save(destination, garbage=4, deflate=True)
+    finally:
+        document.close()
+
+
+def add_page_numbers(source: Path, destination: Path, start: int = 1) -> None:
+    document = fitz.open(source)
+    try:
+        for index, page in enumerate(document):
+            page.insert_text(
+                (page.rect.width / 2 - 8, page.rect.height - 24),
+                str(start + index),
+                fontsize=10,
+                color=(0.25, 0.25, 0.25),
+                overlay=True,
+            )
+        document.save(destination, garbage=4, deflate=True)
+    finally:
+        document.close()
+
+
+def crop_pdf(source: Path, destination: Path, left: float, top: float, right: float, bottom: float) -> None:
+    document = fitz.open(source)
+    try:
+        for page in document:
+            rect = page.rect
+            crop = fitz.Rect(left, top, rect.width - right, rect.height - bottom)
+            if crop.width <= 0 or crop.height <= 0:
+                raise ValueError("Crop margins leave no page area")
+            page.set_cropbox(crop)
+        document.save(destination, garbage=4, deflate=True)
+    finally:
+        document.close()
+
+
+def protect_pdf(source: Path, destination: Path, password: str) -> None:
+    document = fitz.open(source)
+    try:
+        document.save(
+            destination,
+            garbage=4,
+            deflate=True,
+            encryption=fitz.PDF_ENCRYPT_AES_256,
+            user_pw=password,
+            owner_pw=password,
+        )
+    finally:
+        document.close()
+
+
+def unlock_pdf(source: Path, destination: Path, password: str) -> None:
+    document = fitz.open(source)
+    try:
+        if document.needs_pass and not document.authenticate(password):
+            raise ValueError("The PDF password is incorrect")
+        document.save(destination, garbage=4, deflate=True)
+    finally:
+        document.close()
+
+
+def repair_pdf(source: Path, destination: Path) -> None:
+    document = fitz.open(source)
+    try:
+        document.save(destination, garbage=4, deflate=True, clean=True)
+    finally:
+        document.close()

@@ -206,6 +206,145 @@ def test_pdf_to_images_returns_zip() -> None:
     assert response.headers["content-type"] == "application/zip"
 
 
+def _sample_pdf(page_count: int = 1) -> bytes:
+    document = fitz.open()
+    for _ in range(page_count):
+        document.new_page(width=200, height=200)
+    output = BytesIO()
+    document.save(output)
+    document.close()
+    return output.getvalue()
+
+
+def test_pdf_enhancements_return_usable_pdfs() -> None:
+    source = _sample_pdf(2)
+    for operation, data in [
+        ("watermark", {"text": "OneFile"}),
+        ("page-numbers", {"start": "5"}),
+        ("crop", {"left": "5", "top": "5", "right": "5", "bottom": "5"}),
+        ("repair", {}),
+    ]:
+        response = client.post(
+            "/api/v1/pdfs/enhance",
+            data={"operation": operation, **data},
+            files={"file": ("sample.pdf", source, "application/pdf")},
+        )
+        assert response.status_code == 200
+        document = fitz.open(stream=response.content, filetype="pdf")
+        assert len(document) == 2
+        document.close()
+
+
+def test_pdf_protect_and_unlock_round_trip() -> None:
+    source = _sample_pdf()
+    protected = client.post(
+        "/api/v1/pdfs/enhance",
+        data={"operation": "protect", "password": "secret"},
+        files={"file": ("sample.pdf", source, "application/pdf")},
+    )
+    assert protected.status_code == 200
+    locked = fitz.open(stream=protected.content, filetype="pdf")
+    assert bool(locked.needs_pass) is True
+    locked.close()
+
+    unlocked = client.post(
+        "/api/v1/pdfs/enhance",
+        data={"operation": "unlock", "password": "secret"},
+        files={"file": ("locked.pdf", protected.content, "application/pdf")},
+    )
+    assert unlocked.status_code == 200
+    result = fitz.open(stream=unlocked.content, filetype="pdf")
+    assert bool(result.needs_pass) is False
+    result.close()
+
+
+def _text_pdf(text: str) -> bytes:
+    document = fitz.open()
+    page = document.new_page(width=300, height=200)
+    page.insert_text((30, 40), text)
+    output = BytesIO()
+    document.save(output)
+    document.close()
+    return output.getvalue()
+
+
+def test_pdf_compare_reports_changed_pages() -> None:
+    response = client.post(
+        "/api/v1/pdfs/compare",
+        files=[
+            ("first", ("first.pdf", _text_pdf("private name"), "application/pdf")),
+            ("second", ("second.pdf", _text_pdf("public name"), "application/pdf")),
+        ],
+    )
+
+    assert response.status_code == 200
+    assert response.json()["identical"] is False
+    assert response.json()["changed_pages"] == [0]
+
+
+def test_pdf_redaction_removes_matching_text() -> None:
+    response = client.post(
+        "/api/v1/pdfs/redact",
+        data={"terms": "secret"},
+        files={"file": ("sample.pdf", _text_pdf("secret public"), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    document = fitz.open(stream=response.content, filetype="pdf")
+    assert "secret" not in "\n".join(page.get_text() for page in document).lower()
+    document.close()
+
+
+def test_pdf_to_markdown_returns_document_text() -> None:
+    response = client.post(
+        "/api/v1/ai/pdf-to-markdown",
+        files={"file": ("sample.pdf", _text_pdf("CONFIDENTIAL\nbody text"), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/markdown")
+    assert "CONFIDENTIAL" in response.text
+    assert "body text" in response.text
+
+
+def test_smart_split_returns_zip() -> None:
+    document = fitz.open()
+    first = document.new_page(width=300, height=200)
+    first.insert_text((30, 40), "INTRODUCTION")
+    second = document.new_page(width=300, height=200)
+    second.insert_text((30, 40), "APPENDIX")
+    source = BytesIO()
+    document.save(source)
+    document.close()
+
+    response = client.post(
+        "/api/v1/ai/smart-split",
+        files={"file": ("sample.pdf", source.getvalue(), "application/pdf")},
+    )
+
+    assert response.status_code == 200
+    with ZipFile(BytesIO(response.content)) as archive:
+        assert archive.namelist() == ["section-1.pdf", "section-2.pdf"]
+
+
+def test_platform_presets_and_history() -> None:
+    preset = client.post(
+        "/api/v1/platform/presets",
+        json={"name": "Passport photo", "tool": "image-resize", "configuration": {"width": 200, "height": 230}},
+    )
+    assert preset.status_code == 201
+    preset_id = preset.json()["id"]
+    assert client.get("/api/v1/platform/presets").json()[0]["name"] == "Passport photo"
+
+    history = client.post(
+        "/api/v1/platform/history",
+        json={"tool": "image-resize", "input_name": "photo.png", "output_name": "ready.jpg", "status": "completed"},
+    )
+    assert history.status_code == 201
+    assert client.get("/api/v1/platform/history").json()[0]["output_name"] == "ready.jpg"
+    assert client.delete(f"/api/v1/platform/presets/{preset_id}").status_code == 204
+
+
 def test_images_to_pdf_returns_pdf() -> None:
     first = BytesIO()
     second = BytesIO()

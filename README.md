@@ -15,6 +15,14 @@ The current MVP supports secure processing for JPG, PNG, WebP, PDF, and DOCX upl
 
 Phase 1 workflows include image compression with target-size limits, image resize/crop/format conversion, image-to-PDF, PDF compression and page operations, PDF/image conversion, DOCX/PDF conversion, multiple-file ordering and removal, drag-and-drop upload, batch image ZIP output, requirement validation, and image Auto-fix. Auto-fix applies crop, resize, conversion, and JPEG compression when the requested constraints are technically reachable.
 
+The first Phase 2 PDF slice is also implemented: watermarking, page numbering, PDF cropping, password protection, unlocking, and repair are available under PDF enhancements.
+
+The first Phase 3 PDF review slice is implemented: users can compare two PDF text layers and receive changed-page metadata, or permanently redact comma-separated terms from a PDF. OCR, forms, editing, signing, e-signature requests, and audit trails are not yet enabled.
+
+The first Phase 4 document-intelligence slice is implemented: PDF-to-Markdown export and heading-based Smart Split are available without requiring a third-party AI key. Generative summarization, translation, semantic extraction, and model-backed document analysis remain pending until an AI provider and privacy configuration are selected.
+
+The first Phase 5 platform slice is implemented: accountless saved presets and metadata-only processing history are available in the Workspace panel and through `/api/v1/platform`. The SQLite metadata path is configured with `ONEFILE_METADATA_DB`; uploaded file contents are never stored there. User authentication, integrations, API keys, webhooks, usage billing, team accounts, and admin controls remain pending.
+
 ## Privacy and safety
 
 OneFile does not require an account for the current workflow. Uploaded files are handled in an isolated temporary workspace, validated before parsing, and removed after the check completes. Configurable upload and processing limits help prevent oversized or unsupported files from reaching the processing layer.
