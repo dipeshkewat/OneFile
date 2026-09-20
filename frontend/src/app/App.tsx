@@ -34,7 +34,7 @@ type DirectoryItem = {
   category: CategoryId;
   categoryLabel: string;
   formats: string;
-  accent: "red" | "orange" | "green" | "purple" | "blue" | "yellow" | "indigo" | "teal";
+  badgeClass: string;
   icon: string;
   initial?: {
     pdfOperation?: string;
@@ -69,11 +69,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "merge-pdf",
     toolId: "pdf-organize",
     title: "Merge PDF",
-    description: "Combine multiple PDF documents into one single file in any custom order.",
+    description: "Combine PDFs in the order you want with the easiest PDF merger available.",
     category: "organize",
     categoryLabel: "Organize",
     formats: "2+ PDF files",
-    accent: "red",
+    badgeClass: "badge-red",
     icon: "merge",
     initial: { pdfOperation: "merge" },
   },
@@ -81,11 +81,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "split-pdf",
     toolId: "pdf-organize",
     title: "Split PDF",
-    description: "Extract specific pages or page ranges into a separate PDF file.",
+    description: "Separate one page or a whole set for easy conversion into independent PDF files.",
     category: "organize",
     categoryLabel: "Organize",
     formats: "PDF · Pages",
-    accent: "red",
+    badgeClass: "badge-orange",
     icon: "split",
     initial: { pdfOperation: "split" },
   },
@@ -93,11 +93,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "delete-pdf-pages",
     toolId: "pdf-organize",
     title: "Remove PDF pages",
-    description: "Delete unwanted pages from your PDF with a simple list of page numbers.",
+    description: "Delete unwanted pages from your PDF document with a quick selection.",
     category: "organize",
     categoryLabel: "Organize",
     formats: "PDF · Delete",
-    accent: "red",
+    badgeClass: "badge-red",
     icon: "delete",
     initial: { pdfOperation: "delete" },
   },
@@ -105,24 +105,24 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "rotate-pdf",
     toolId: "pdf-organize",
     title: "Rotate PDF",
-    description: "Rotate all or specific pages in 90-degree increments to fix orientations.",
+    description: "Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!",
     category: "organize",
     categoryLabel: "Organize",
     formats: "PDF · 90°",
-    accent: "red",
+    badgeClass: "badge-purple",
     icon: "rotate",
     initial: { pdfOperation: "rotate" },
   },
   {
     id: "reorder-pdf",
     toolId: "pdf-organize",
-    title: "Reorder PDF pages",
-    description: "Rearrange the exact sequence of pages in your PDF document.",
+    title: "Organize PDF",
+    description: "Sort pages of your PDF file however you like. Reorder or delete PDF pages at your convenience.",
     category: "organize",
     categoryLabel: "Organize",
-    formats: "PDF · Reorder",
-    accent: "red",
-    icon: "reorder",
+    formats: "PDF · Sequence",
+    badgeClass: "badge-red",
+    icon: "organize",
     initial: { pdfOperation: "reorder" },
   },
 
@@ -131,22 +131,22 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "compress-pdf",
     toolId: "pdf-compress",
     title: "Compress PDF",
-    description: "Reduce PDF file size for portal upload while maintaining readability.",
+    description: "Reduce file size while optimizing for maximal PDF quality and readability.",
     category: "optimize",
     categoryLabel: "Optimize",
     formats: "PDF · Target MB",
-    accent: "orange",
+    badgeClass: "badge-green",
     icon: "compress",
   },
   {
     id: "repair-pdf",
     toolId: "pdf-enhance",
     title: "Repair PDF",
-    description: "Fix damaged, corrupt, or unreadable PDF files and rebuild structure.",
+    description: "Repair a damaged PDF and recover data from corrupt PDF files with our repair tool.",
     category: "optimize",
     categoryLabel: "Optimize",
-    formats: "PDF",
-    accent: "orange",
+    formats: "PDF · Rebuild",
+    badgeClass: "badge-green",
     icon: "repair",
     initial: { pdfEnhanceOperation: "repair" },
   },
@@ -156,47 +156,47 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "pdf-to-word",
     toolId: "document-convert",
     title: "PDF to Word",
-    description: "Convert PDF documents into editable Word DOCX documents.",
+    description: "Easily convert your PDF files into easy to edit DOC and DOCX documents.",
     category: "convert",
     categoryLabel: "Convert",
     formats: "PDF → DOCX",
-    accent: "green",
-    icon: "convert-doc",
+    badgeClass: "badge-blue",
+    icon: "pdf-to-word",
     initial: { outputFormat: "docx" },
   },
   {
     id: "word-to-pdf",
     toolId: "document-convert",
     title: "Word to PDF",
-    description: "Convert Word DOCX files into standard, upload-ready PDF documents.",
+    description: "Make DOC and DOCX files easy to read by converting them to upload-ready PDF.",
     category: "convert",
     categoryLabel: "Convert",
     formats: "DOCX → PDF",
-    accent: "green",
-    icon: "convert-doc",
+    badgeClass: "badge-blue",
+    icon: "word-to-pdf",
     initial: { outputFormat: "pdf" },
   },
   {
     id: "pdf-to-images",
     toolId: "pdf-convert",
-    title: "PDF to Images",
-    description: "Extract every page of your PDF into crisp PNG image files in a ZIP.",
+    title: "PDF to JPG",
+    description: "Convert each PDF page into a JPG or extract all images contained in a PDF.",
     category: "convert",
     categoryLabel: "Convert",
-    formats: "PDF → PNG ZIP",
-    accent: "green",
+    formats: "PDF → Images ZIP",
+    badgeClass: "badge-yellow",
     icon: "pdf-to-images",
     initial: { pdfConvertMode: "pdf-to-images" },
   },
   {
     id: "images-to-pdf",
     toolId: "image-to-pdf",
-    title: "Images to PDF",
-    description: "Combine one or more JPG, PNG, or WebP images into a single clean PDF.",
+    title: "JPG to PDF",
+    description: "Convert JPG images to PDF in seconds. Easily adjust orientation and margins.",
     category: "convert",
     categoryLabel: "Convert",
     formats: "JPG · PNG · WebP",
-    accent: "green",
+    badgeClass: "badge-amber",
     icon: "images-to-pdf",
   },
 
@@ -204,24 +204,24 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
   {
     id: "watermark-pdf",
     toolId: "pdf-enhance",
-    title: "Watermark PDF",
-    description: "Add a custom diagonal text watermark across all pages of your PDF.",
+    title: "Watermark",
+    description: "Stamp an image or text over your PDF in seconds. Choose typography, transparency and position.",
     category: "edit",
     categoryLabel: "Edit",
-    formats: "PDF · Watermark",
-    accent: "purple",
+    formats: "PDF · Stamp",
+    badgeClass: "badge-purple",
     icon: "watermark",
     initial: { pdfEnhanceOperation: "watermark" },
   },
   {
     id: "page-numbers",
     toolId: "pdf-enhance",
-    title: "Add Page Numbers",
-    description: "Insert clean, numbered pagination at the bottom of every page.",
+    title: "Page numbers",
+    description: "Add page numbers into PDFs with ease. Choose your positions, dimensions, typography.",
     category: "edit",
     categoryLabel: "Edit",
     formats: "PDF · Pagination",
-    accent: "purple",
+    badgeClass: "badge-magenta",
     icon: "page-numbers",
     initial: { pdfEnhanceOperation: "page-numbers" },
   },
@@ -229,11 +229,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "crop-pdf",
     toolId: "pdf-enhance",
     title: "Crop PDF",
-    description: "Trim page margins, remove headers or footers, or adjust print areas.",
+    description: "Trim page margins, remove headers or footers, or adjust visible page area.",
     category: "edit",
     categoryLabel: "Edit",
     formats: "PDF · Margins",
-    accent: "purple",
+    badgeClass: "badge-purple",
     icon: "crop",
     initial: { pdfEnhanceOperation: "crop" },
   },
@@ -243,11 +243,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "protect-pdf",
     toolId: "pdf-enhance",
     title: "Protect PDF",
-    description: "Encrypt and lock your PDF document with AES-256 password protection.",
+    description: "Protect PDF files with a password. Encrypt PDF documents to prevent unauthorized access.",
     category: "security",
     categoryLabel: "Security",
     formats: "PDF · AES-256",
-    accent: "blue",
+    badgeClass: "badge-darkblue",
     icon: "protect",
     initial: { pdfEnhanceOperation: "protect" },
   },
@@ -255,11 +255,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "unlock-pdf",
     toolId: "pdf-enhance",
     title: "Unlock PDF",
-    description: "Remove passwords and security restrictions from an encrypted PDF.",
+    description: "Remove PDF password security, giving you the freedom to use your PDFs as you want.",
     category: "security",
     categoryLabel: "Security",
     formats: "PDF · Unlock",
-    accent: "blue",
+    badgeClass: "badge-blue",
     icon: "unlock",
     initial: { pdfEnhanceOperation: "unlock" },
   },
@@ -267,11 +267,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "redact-pdf",
     toolId: "pdf-review",
     title: "Redact PDF",
-    description: "Permanently black out sensitive terms, names, and account numbers.",
+    description: "Permanently black out and sanitize sensitive terms, names, and account numbers.",
     category: "security",
     categoryLabel: "Security",
     formats: "PDF · Redact",
-    accent: "blue",
+    badgeClass: "badge-slate",
     icon: "redact",
     initial: { pdfReviewOperation: "redact" },
   },
@@ -281,11 +281,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "pdf-to-markdown",
     toolId: "pdf-intelligence",
     title: "PDF to Markdown",
-    description: "Turn PDF text and heading hierarchy into clean, structured Markdown (.md).",
+    description: "Turn PDF text, headings, and hierarchy into clean, structured Markdown (.md).",
     category: "intelligence",
     categoryLabel: "Intelligence",
     formats: "PDF → Markdown",
-    accent: "yellow",
+    badgeClass: "badge-amber",
     icon: "markdown",
     initial: { intelligenceOperation: "pdf-to-markdown" },
   },
@@ -293,11 +293,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "smart-split",
     toolId: "pdf-intelligence",
     title: "Smart Split",
-    description: "Automatically split long documents into chapters based on section headings.",
+    description: "Automatically split long documents into distinct chapters based on section headings.",
     category: "intelligence",
     categoryLabel: "Intelligence",
     formats: "PDF → Chapters ZIP",
-    accent: "yellow",
+    badgeClass: "badge-amber",
     icon: "smart-split",
     initial: { intelligenceOperation: "smart-split" },
   },
@@ -305,11 +305,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "compare-pdfs",
     toolId: "pdf-review",
     title: "Compare PDFs",
-    description: "Compare two PDF versions side-by-side to highlight page differences.",
+    description: "Compare two PDF versions side-by-side to highlight page differences in seconds.",
     category: "intelligence",
     categoryLabel: "Intelligence",
     formats: "2 PDF files",
-    accent: "yellow",
+    badgeClass: "badge-amber",
     icon: "compare",
     initial: { pdfReviewOperation: "compare" },
   },
@@ -319,22 +319,22 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "image-compress",
     toolId: "image-compress",
     title: "Compress Image",
-    description: "Hit an exact target file size in KB without losing more quality than needed.",
+    description: "Hit an exact target file size in KB without losing more quality than necessary.",
     category: "images",
     categoryLabel: "Images",
     formats: "JPG · PNG · WebP",
-    accent: "teal",
+    badgeClass: "badge-teal",
     icon: "image-compress",
   },
   {
     id: "image-resize",
     toolId: "image-resize",
-    title: "Resize & Crop Image",
-    description: "Set exact pixel dimensions or crop to a specific aspect ratio for upload.",
+    title: "Resize & Crop",
+    description: "Set exact pixel dimensions or crop to a specific aspect ratio for upload portals.",
     category: "images",
     categoryLabel: "Images",
     formats: "Exact dimensions",
-    accent: "teal",
+    badgeClass: "badge-teal",
     icon: "image-resize",
     initial: { resizeMode: "crop" },
   },
@@ -342,11 +342,11 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "image-convert",
     toolId: "image-convert",
     title: "Convert Image",
-    description: "Convert between JPG, PNG, and WebP formats in one clean step.",
+    description: "Convert between JPG, PNG, and WebP formats in one quick, seamless step.",
     category: "images",
     categoryLabel: "Images",
     formats: "JPG · PNG · WebP",
-    accent: "teal",
+    badgeClass: "badge-teal",
     icon: "image-convert",
   },
 
@@ -355,33 +355,33 @@ const DIRECTORY_ITEMS: DirectoryItem[] = [
     id: "validate",
     toolId: "validate",
     title: "Check Requirements",
-    description: "Verify format, size, dimensions, resolution, and page count before upload.",
+    description: "Verify format, file size, dimensions, resolution, and page count before upload.",
     category: "workflows",
     categoryLabel: "Workflows",
     formats: "All supported files",
-    accent: "indigo",
+    badgeClass: "badge-indigo",
     icon: "validate",
   },
   {
     id: "auto-fix",
     toolId: "validate",
     title: "Auto-Fix & Validate",
-    description: "One-click engine: automatically crops, resizes, and compresses to fit.",
+    description: "One-click engine: automatically crops, resizes, and compresses images to fit.",
     category: "workflows",
     categoryLabel: "Workflows",
     formats: "JPG · PNG · WebP",
-    accent: "indigo",
+    badgeClass: "badge-indigo",
     icon: "auto-fix",
   },
   {
     id: "batch",
     toolId: "image-compress",
-    title: "Batch Image Workflow",
-    description: "Process multiple images in bulk and download everything in a single ZIP.",
+    title: "Batch Workflow",
+    description: "Process multiple images in bulk and download everything in a clean ZIP bundle.",
     category: "workflows",
     categoryLabel: "Workflows",
-    formats: "Multiple images",
-    accent: "indigo",
+    formats: "Multiple files",
+    badgeClass: "badge-indigo",
     icon: "workflows",
     initial: { batchMode: true },
   },
@@ -399,222 +399,250 @@ function acceptsForTool(toolId: ToolId | null, pdfConvertMode: string): string {
   return ".jpg,.jpeg,.png,.webp,.pdf";
 }
 
+/* Reference-Style SVG Icons */
 function ToolIcon({ name }: { name: string }) {
-  const props = {
-    viewBox: "0 0 24 24",
-    width: "22",
-    height: "22",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: "2",
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-  };
-
   switch (name) {
     case "merge":
+      // Two pages with inward diagonal arrows
       return (
-        <svg {...props}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <path d="M12 18v-6" />
-          <path d="M9 15l3 3 3-3" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="9" rx="1.5" fill="#ffffff" fillOpacity="0.25" />
+          <rect x="14" y="12" width="7" height="9" rx="1.5" fill="#ffffff" fillOpacity="0.25" />
+          <path d="M5 19l6-6m0 0H7m4 0v4" />
+          <path d="M19 5l-6 6m0 0h4m-4 0V7" />
         </svg>
       );
     case "split":
+      // Two pages with outward diagonal arrows
       return (
-        <svg {...props}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <line x1="2" y1="12" x2="22" y2="12" strokeDasharray="2 2" />
-          <polyline points="6 9 3 12 6 15" />
-          <polyline points="18 9 21 12 18 15" />
-        </svg>
-      );
-    case "delete":
-      return (
-        <svg {...props}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <circle cx="12" cy="14" r="4" />
-          <line x1="10" y1="14" x2="14" y2="14" />
-        </svg>
-      );
-    case "rotate":
-      return (
-        <svg {...props}>
-          <path d="M21.5 2v6h-6" />
-          <path d="M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.19" />
-        </svg>
-      );
-    case "reorder":
-      return (
-        <svg {...props}>
-          <line x1="4" y1="6" x2="20" y2="6" />
-          <line x1="4" y1="12" x2="14" y2="12" />
-          <line x1="4" y1="18" x2="18" y2="18" />
-          <path d="M18 9l3 3-3 3" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="13" y="13" width="7" height="8" rx="1.5" fill="#ffffff" fillOpacity="0.25" />
+          <rect x="4" y="3" width="7" height="8" rx="1.5" fill="#ffffff" fillOpacity="0.25" />
+          <path d="M11 13L4 20m0 0h4m-4 0v-4" />
+          <path d="M13 11l7-7m0 0h-4m4 0v4" />
         </svg>
       );
     case "compress":
+      // 4 inward arrows pointing to center
       return (
-        <svg {...props}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <polyline points="4 14 8 14 8 18" />
-          <polyline points="20 10 16 10 16 6" />
-          <line x1="16" y1="10" x2="21" y2="5" />
-          <line x1="3" y1="19" x2="8" y2="14" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 4l5 5m0 0H5m4 0V5" />
+          <path d="M20 4l-5 5m0 0h4m-4 0V5" />
+          <path d="M4 20l5-5m0 0H5m4 0v4" />
+          <path d="M20 20l-5-5m0 0h4m-4 0v4" />
         </svg>
       );
-    case "repair":
+    case "pdf-to-word":
+      // White sheet with bold blue W
       return (
-        <svg {...props}>
-          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none">
+          <path d="M4 3h10l6 6v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z" fill="#ffffff" />
+          <path d="M14 3v6h6" fill="#e0e7ff" />
+          <text x="6" y="18.5" fill="#2563eb" fontSize="10.5" fontWeight="900" fontFamily="sans-serif">W</text>
         </svg>
       );
-    case "convert-doc":
+    case "word-to-pdf":
+      // White sheet with W and converting arrow
       return (
-        <svg {...props}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <path d="M8 13h8" />
-          <path d="M13 10l3 3-3 3" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none">
+          <rect x="2" y="4" width="12" height="16" rx="1.5" fill="#ffffff" />
+          <text x="4" y="16" fill="#1d4ed8" fontSize="9" fontWeight="900" fontFamily="sans-serif">W</text>
+          <path d="M15 12h7m-3-3l3 3-3 3" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       );
     case "pdf-to-images":
+      // Mountain & sun image icon
       return (
-        <svg {...props}>
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <circle cx="8.5" cy="8.5" r="1.5" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" fill="#ffffff" fillOpacity="0.2" />
+          <circle cx="8.5" cy="8.5" r="2" fill="#ffffff" />
           <polyline points="21 15 16 10 5 21" />
         </svg>
       );
     case "images-to-pdf":
+      // Image converting to PDF document
       return (
-        <svg {...props}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <circle cx="9" cy="13" r="1.5" />
-          <path d="M15 17l-3-3-3 3" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="4" width="11" height="11" rx="1.5" fill="#ffffff" fillOpacity="0.2" />
+          <circle cx="5.5" cy="7.5" r="1" fill="#ffffff" />
+          <polyline points="12 12 9 9 3 15" />
+          <path d="M15 7h6a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1h-8a1 1 0 0 1-1-1v-4" />
         </svg>
       );
     case "watermark":
+      // Rubber stamper tool
       return (
-        <svg {...props}>
-          <path d="M12 2L2 7l10 5 10-5-10-5z" />
-          <path d="M2 17l10 5 10-5" />
-          <path d="M2 12l10 5 10-5" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 3h6a1 1 0 0 1 1 1v2a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V4a1 1 0 0 1 1-1z" fill="#ffffff" />
+          <path d="M12 8v5" />
+          <rect x="4" y="13" width="16" height="5" rx="1.5" fill="#ffffff" fillOpacity="0.3" />
+          <line x1="3" y1="21" x2="21" y2="21" strokeWidth="2.5" />
         </svg>
       );
     case "page-numbers":
+      // 4 numbered square blocks [1][2] / [3][4]
       return (
-        <svg {...props}>
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none">
+          <rect x="3" y="3" width="8" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="13" y="3" width="8" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="3" y="13" width="8" height="8" rx="1.5" fill="#ffffff" />
+          <rect x="13" y="13" width="8" height="8" rx="1.5" fill="#ffffff" />
+          <text x="6" y="9.5" fill="#9333ea" fontSize="6.5" fontWeight="900" fontFamily="sans-serif">1</text>
+          <text x="16" y="9.5" fill="#9333ea" fontSize="6.5" fontWeight="900" fontFamily="sans-serif">2</text>
+          <text x="6" y="19.5" fill="#9333ea" fontSize="6.5" fontWeight="900" fontFamily="sans-serif">3</text>
+          <text x="16" y="19.5" fill="#9333ea" fontSize="6.5" fontWeight="900" fontFamily="sans-serif">4</text>
+        </svg>
+      );
+    case "rotate":
+      // Circular rotation arrow
+      return (
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 3v6h-6" />
+          <path d="M20.5 15.5A9 9 0 1 1 19 8.5L21 3" />
+        </svg>
+      );
+    case "protect":
+      // Protective shield
+      return (
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#ffffff" fillOpacity="0.2" />
+          <path d="M9 12l2 2 4-4" />
+        </svg>
+      );
+    case "unlock":
+      // Open padlock
+      return (
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" fill="#ffffff" fillOpacity="0.25" />
+          <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+          <circle cx="12" cy="16.5" r="1.5" fill="#ffffff" />
+        </svg>
+      );
+    case "organize":
+      // Two document layers with up/down sort arrows
+      return (
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="3" width="12" height="7" rx="1" fill="#ffffff" fillOpacity="0.2" />
+          <rect x="2" y="14" width="12" height="7" rx="1" fill="#ffffff" fillOpacity="0.2" />
+          <path d="M19 4v16m0-16l-3 3m3-3l3 3m-3 13l-3-3m3 3l3-3" />
+        </svg>
+      );
+    case "repair":
+      // Crossed wrench and screwdriver
+      return (
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" fill="#ffffff" fillOpacity="0.2" />
+        </svg>
+      );
+    case "delete":
+      // Document with minus removal circle
+      return (
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <line x1="8" y1="16" x2="8" y2="18" />
-          <line x1="12" y1="14" x2="12" y2="18" />
-          <line x1="16" y1="12" x2="16" y2="18" />
+          <circle cx="12" cy="14" r="4.5" fill="#e53238" stroke="#ffffff" strokeWidth="2" />
+          <line x1="9.5" y1="14" x2="14.5" y2="14" stroke="#ffffff" strokeWidth="2.5" />
         </svg>
       );
     case "crop":
+      // Framing crop marks
       return (
-        <svg {...props}>
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M6 2v14a2 2 0 0 0 2 2h14" />
           <path d="M18 22V8a2 2 0 0 0-2-2H2" />
         </svg>
       );
-    case "protect":
-      return (
-        <svg {...props}>
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-        </svg>
-      );
-    case "unlock":
-      return (
-        <svg {...props}>
-          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-          <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-        </svg>
-      );
     case "redact":
+      // Document with blackout marker stripes
       return (
-        <svg {...props}>
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <line x1="7" y1="12" x2="17" y2="12" strokeWidth="3" stroke="currentColor" />
-          <line x1="7" y1="16" x2="14" y2="16" strokeWidth="3" stroke="currentColor" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="#ffffff" fillOpacity="0.1" />
+          <line x1="7" y1="12" x2="17" y2="12" strokeWidth="3" stroke="#ffffff" />
+          <line x1="7" y1="16" x2="13" y2="16" strokeWidth="3" stroke="#ffffff" />
         </svg>
       );
     case "compare":
+      // Side by side documents
       return (
-        <svg {...props}>
-          <rect x="2" y="4" width="8" height="16" rx="1" />
-          <rect x="14" y="4" width="8" height="16" rx="1" />
-          <path d="M10 10l4 4" />
-          <path d="M14 10l-4 4" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="2" y="4" width="8" height="16" rx="1.5" fill="#ffffff" fillOpacity="0.2" />
+          <rect x="14" y="4" width="8" height="16" rx="1.5" fill="#ffffff" fillOpacity="0.2" />
+          <path d="M10 10l4 4m0-4l-4 4" />
         </svg>
       );
     case "markdown":
+      // Document with Markdown M-down
       return (
-        <svg {...props}>
-          <rect x="2" y="4" width="20" height="16" rx="2" />
-          <path d="M6 15v-6l2.5 3L11 9v6" />
-          <path d="M15 12l2 3 2-3" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="16" rx="2" fill="#ffffff" fillOpacity="0.15" />
+          <path d="M6 15v-6l2.5 3L11 9v6" strokeWidth="2.2" />
+          <path d="M16 10v6m-2-2l2 2 2-2" strokeWidth="2.2" />
         </svg>
       );
     case "smart-split":
+      // Document branching chapters
       return (
-        <svg {...props}>
-          <circle cx="6" cy="6" r="3" />
-          <circle cx="6" cy="18" r="3" />
-          <circle cx="18" cy="12" r="3" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="6" cy="6" r="3" fill="#ffffff" />
+          <circle cx="6" cy="18" r="3" fill="#ffffff" />
+          <circle cx="18" cy="12" r="3" fill="#ffffff" />
           <path d="M6 9v6" />
           <path d="M8.5 7.5L15.5 10.5" />
           <path d="M8.5 16.5L15.5 13.5" />
         </svg>
       );
     case "image-compress":
+      // Photo with inward squeeze arrows
       return (
-        <svg {...props}>
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <polyline points="4 14 10 14 10 20" />
-          <polyline points="20 10 14 10 14 4" />
-          <line x1="14" y1="10" x2="21" y2="3" />
-          <line x1="3" y1="21" x2="10" y2="14" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" fill="#ffffff" fillOpacity="0.15" />
+          <path d="M6 6l4 4m0 0H7m3 0V7" />
+          <path d="M18 6l-4 4m0 0h3m-3 0V7" />
+          <path d="M6 18l4-4m0 0H7m3 0v3" />
+          <path d="M18 18l-4-4m0 0h3m-3 0v3" />
         </svg>
       );
     case "image-resize":
+      // Photo with crop handles
       return (
-        <svg {...props}>
-          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-          <path d="M15 3h6v6" />
-          <path d="M9 21H3v-6" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2" fill="#ffffff" fillOpacity="0.15" />
+          <path d="M14 3h7v7" />
+          <path d="M10 21H3v-7" />
           <path d="M21 3l-7 7" />
           <path d="M3 21l7-7" />
         </svg>
       );
     case "image-convert":
+      // Photo with format exchange arrows
       return (
-        <svg {...props}>
-          <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 4v5h5" />
+          <path d="M20 20v-5h-5" />
+          <path d="M4 9a8 8 0 0 1 14.5-3.5" />
+          <path d="M20 15a8 8 0 0 1-14.5 3.5" />
         </svg>
       );
     case "validate":
+      // Verification checkmark
       return (
-        <svg {...props}>
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
           <polyline points="22 4 12 14.01 9 11.01" />
         </svg>
       );
     case "auto-fix":
+      // Magic wand with sparkles
       return (
-        <svg {...props}>
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M15 4V2m0 16v-2m8-6h-2M4 12H2m15.5-6.5l-1.5 1.5M6 18l-1.5 1.5M17.5 17.5l1.5 1.5M6 6L4.5 4.5" />
-          <path d="M9 12l2 2 4-4" />
+          <path d="M9 12l2 2 4-4" strokeWidth="2.5" />
         </svg>
       );
     case "workflows":
     default:
+      // Sliders
       return (
-        <svg {...props}>
+        <svg viewBox="0 0 24 24" width="23" height="23" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <line x1="4" y1="21" x2="4" y2="14" />
           <line x1="4" y1="10" x2="4" y2="3" />
           <line x1="12" y1="21" x2="12" y2="12" />
@@ -992,19 +1020,23 @@ export function App() {
 
   return (
     <main className="page-shell">
-      {/* Intro Header */}
+      {/* Intro Header matching Editorial Typography Reference */}
       <section className="intro-panel" aria-labelledby="page-title">
-        <p className="kicker">ONEFILE / DOCUMENT & IMAGE WORKSPACE</p>
-        <h1 id="page-title">Make your files fit the requirements.</h1>
+        <div className="kicker-badges">
+          <span className="kicker-tag">Approachable</span>
+          <span className="kicker-tag secondary">High X-Height</span>
+          <span className="kicker-tag secondary">OneFile Workspace</span>
+        </div>
+        <h1 id="page-title">Supercharge your file workflow for what's next.</h1>
         <p className="lede">
-          Choose the file job you need, set a measurable requirement, and leave with something a portal will accept.
+          Unlock the power of fast, versatile document preparation. Merge, split, compress, convert, and protect your files with meticulously crafted tools that fit any requirement.
         </p>
         <div className="trust-line">
-          <span className="status-dot" /> Temporary processing · no account required
+          <span className="status-dot" /> Temporary processing · Private by default · No account required
         </div>
       </section>
 
-      {/* Categorized Filter Navigation (matching reference image) */}
+      {/* Categorized Filter Navigation matching reference image */}
       {view === "directory" && (
         <section className="category-filter-section" aria-label="Tool Categories">
           <p className="category-subtitle">
@@ -1053,13 +1085,13 @@ export function App() {
           <div className="tool-grid">
             {filteredItems.map((item) => (
               <button
-                className={`tool-card tool-${item.accent}`}
+                className="tool-card"
                 key={item.id}
                 type="button"
                 onClick={() => chooseItem(item)}
               >
                 <span className="tool-topline">
-                  <span className="tool-mark" aria-hidden="true">
+                  <span className={`tool-mark ${item.badgeClass}`} aria-hidden="true">
                     <ToolIcon name={item.icon} />
                   </span>
                   <span className="tool-cat-badge">{item.categoryLabel}</span>
