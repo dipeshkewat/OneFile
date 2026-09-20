@@ -1022,26 +1022,12 @@ export function App() {
     <main className="page-shell">
       {/* Intro Header matching Editorial Typography Reference */}
       <section className="intro-panel" aria-labelledby="page-title">
-        <div className="kicker-badges">
-          <span className="kicker-tag">Approachable</span>
-          <span className="kicker-tag secondary">High X-Height</span>
-          <span className="kicker-tag secondary">OneFile Workspace</span>
-        </div>
-        <h1 id="page-title">Supercharge your file workflow for what's next.</h1>
-        <p className="lede">
-          Unlock the power of fast, versatile document preparation. Merge, split, compress, convert, and protect your files with meticulously crafted tools that fit any requirement.
-        </p>
-        <div className="trust-line">
-          <span className="status-dot" /> Temporary processing · Private by default · No account required
-        </div>
+        <h1 id="page-title">Split, compress, convert, rotate, unlock and watermark PDFs with just a One clicks.</h1>
       </section>
 
       {/* Categorized Filter Navigation matching reference image */}
       {view === "directory" && (
         <section className="category-filter-section" aria-label="Tool Categories">
-          <p className="category-subtitle">
-            ...split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks.
-          </p>
           <div className="category-pills" role="tablist">
             {CATEGORIES.map((category) => {
               const count =

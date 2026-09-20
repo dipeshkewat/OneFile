@@ -35,8 +35,8 @@ button, input, select {
 
 /* Editorial Typography Intro Header */
 .intro-panel {
-  max-width: 860px;
-  margin: 0 auto 48px;
+  max-width: 900px;
+  margin: 0 auto 28px;
   text-align: center;
 }
 
@@ -66,12 +66,12 @@ button, input, select {
 }
 
 h1 {
-  max-width: 860px;
+  max-width: 980px;
   margin: 0 auto;
   font-family: 'Newsreader', Georgia, serif;
-  font-size: clamp(3rem, 6.5vw, 5.2rem);
-  line-height: 1.02;
-  letter-spacing: -0.035em;
+  font-size: clamp(2.2rem, 4.2vw, 3.8rem);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
   font-weight: 500;
   color: #111827;
 }
